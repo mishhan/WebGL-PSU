@@ -1,19 +1,32 @@
 import webglUtils from "../utils/webglUtils";
 
+import matrix4 from "../math/matrix4";
+import angle from "../math/angle";
+
 import Camera from "./camera";
 
+import SceneObject from "../models/scene-object";
 import Landscape from "../models/landscape";
 import Sky from "../models/sky";
 
-import matrix4 from "../math/matrix4";
-import angle from "../math/angle";
 /* https://stackoverflow.com/questions/45432951/typescript-compiler-cannot-find-module-when-using-webpack-require-for-css-imag */
 // @ts-ignore
+import landscape_map from "../assets/images/landscape/landscape_texture.jpg";
+// @ts-ignore
 import skybox_cubemap from "../assets/images/sky/skybox_cubemap.jpg";
+
+// @ts-ignore
+import house_map from "../models/house/house.jpg";
+import house_obj from "../models/house/house-obj";
+// @ts-ignore
+import cactus_map from "../models/cactus/cactus.jpg";
+import cactus_obj from "../models/cactus/cactus-obj";
 
 export default class Scene {
 	private landscape: any;
 	private sky: any;
+
+	private sceneObjects: SceneObject[];
 
 	private pMatrix: number[];
 	public camera: Camera;
@@ -21,6 +34,7 @@ export default class Scene {
 	private gl: WebGLRenderingContext;
 	private programLandscape: WebGLProgram;
 	private programSky: WebGLProgram;
+	private programObject: WebGLProgram;
 
 	constructor(gl: WebGLRenderingContext, camera: Camera) {
 		this.gl = gl;
@@ -44,7 +58,6 @@ export default class Scene {
 
 			texture: null,
 			textureLocation: null,
-			textureImageElement: null,
 
 			positionLocation: null,
 			normalLocation: null,
@@ -68,8 +81,7 @@ export default class Scene {
 			mvpLocation: null,
 
 			cubeTexture: null,
-			textureLocation: null,
-			textureImageElement: null
+			textureLocation: null
 		};
 	}
 
@@ -91,6 +103,7 @@ export default class Scene {
 		this.landscape.index = landscape.getIndex();
 		this.landscape.matrixes = landscape.getMatrixes();
 		this.landscape.lightPos = landscape.getLightPos();
+
 		this.sky.vertex = sky.getVertex();
 		this.sky.index = sky.getIndex();
 	}
@@ -98,6 +111,7 @@ export default class Scene {
 	private initGraphicData() {
 		this.initLandscape();
 		this.initSky();
+		this.initSceneObjects();
 	}
 
 	private initLandscape() {
@@ -107,7 +121,6 @@ export default class Scene {
 			"landscape-fragment-shader"
 		]);
 
-		this.landscape.textureImageElement = "landscape_texture";
 		this.landscape.positionLocation = gl.getAttribLocation(this.programLandscape, "a_position");
 		this.landscape.normalLocation = gl.getAttribLocation(this.programLandscape, "a_normal");
 		this.landscape.uvLocation = gl.getAttribLocation(this.programLandscape, "a_uv");
@@ -124,17 +137,30 @@ export default class Scene {
 		gl.bindBuffer(gl.ARRAY_BUFFER, this.landscape.vertexBuffer);
 		gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.landscape.vertex), gl.STATIC_DRAW);
 
-		this.landscape.texture = gl.createTexture();
-		gl.bindTexture(gl.TEXTURE_2D, this.landscape.texture);
+		const canvas = <HTMLCanvasElement>document.getElementById("canvas-handler");
+		const context = canvas.getContext("2d");
 
-		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.MIRRORED_REPEAT);
-		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.MIRRORED_REPEAT);
+		const image = new Image();
+		image.src = landscape_map;
+		image.addEventListener("load", () => {
+			context.drawImage(image, 0, 0);
+			this.landscape.texture = gl.createTexture();
+			gl.activeTexture(gl.TEXTURE0);
+			gl.bindTexture(gl.TEXTURE_2D, this.landscape.texture);
+			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.MIRRORED_REPEAT);
+			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.MIRRORED_REPEAT);
+			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
 
-		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-		gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, <HTMLImageElement>(
-			document.getElementById(this.landscape.textureImageElement)
-		));
+			gl.texImage2D(
+				gl.TEXTURE_2D,
+				0,
+				gl.RGBA,
+				gl.RGBA,
+				gl.UNSIGNED_BYTE,
+				context.getImageData(0, 0, image.width, image.height)
+			);
+		});
 	}
 
 	private initSky() {
@@ -144,7 +170,6 @@ export default class Scene {
 			"sky-fragment-shader"
 		]);
 
-		this.sky.textureImageElement = "sky_texture";
 		this.sky.positionLocation = gl.getAttribLocation(this.programSky, "a_position");
 		this.sky.mvpLocation = gl.getUniformLocation(this.programSky, "u_MVP");
 		this.sky.textureLocation = gl.getUniformLocation(this.programSky, "u_skybox");
@@ -210,65 +235,74 @@ export default class Scene {
 		});
 	}
 
+	private initSceneObjects() {
+		const gl = this.gl;
+		this.programObject = webglUtils.createProgramFromScripts(gl, [
+			"object-vertex-shader",
+			"object-fragment-shader"
+		]);
+
+		this.sceneObjects = [];
+
+		const house = new SceneObject(
+			gl,
+			this.programObject,
+			this.camera,
+			this.pMatrix,
+			house_obj,
+			house_map
+		);
+		house.matrixes = {
+			translation: [0.5, 0.1, 0.5],
+			rotation: [0, 0, 0],
+			scale: [1 / 50, 1 / 50, 1 / 50]
+		};
+		this.sceneObjects.push(house);
+
+		const cactus = new SceneObject(
+			gl,
+			this.programObject,
+			this.camera,
+			this.pMatrix,
+			cactus_obj,
+			cactus_map
+		);
+
+		cactus.matrixes = {
+			translation: [-0.5, 0.1, -0.5],
+			rotation: [200, 0, 0],
+			scale: [1 / 500, 1 / 500, 1 / 500]
+		};
+		this.sceneObjects.push(cactus);
+	}
+
 	public drawScene() {
 		const gl = this.gl;
-
 		gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 		gl.enable(gl.CULL_FACE);
 
 		this.drawSky();
 		this.drawLandscape();
+		this.drawSceneObjects();
 	}
 
 	private drawLandscape() {
 		const gl = this.gl;
-
 		gl.useProgram(this.programLandscape);
 		gl.enable(gl.DEPTH_TEST);
 
 		gl.enableVertexAttribArray(this.landscape.positionLocation);
 		gl.enableVertexAttribArray(this.landscape.normalLocation);
 		gl.enableVertexAttribArray(this.landscape.uvLocation);
+
 		gl.bindBuffer(gl.ARRAY_BUFFER, this.landscape.vertexBuffer);
 
-		const size3 = 3;
-		const size2 = 2;
-		const floatBytes = 4;
-		const type = gl.FLOAT;
-		const normalize = false;
-		const stride = 8 * floatBytes;
-		const offsetPosition = 0;
-		const offsetNormal = 3 * floatBytes;
-		const offsetTexture = 6 * floatBytes;
-
-		gl.vertexAttribPointer(
-			this.landscape.positionLocation,
-			size3,
-			type,
-			normalize,
-			stride,
-			offsetPosition
-		);
-		gl.vertexAttribPointer(
-			this.landscape.normalLocation,
-			size3,
-			type,
-			normalize,
-			stride,
-			offsetNormal
-		);
-		gl.vertexAttribPointer(
-			this.landscape.uvLocation,
-			size2,
-			type,
-			normalize,
-			stride,
-			offsetTexture
-		);
+		gl.vertexAttribPointer(this.landscape.positionLocation, 3, gl.FLOAT, false, 8 * 4, 0);
+		gl.vertexAttribPointer(this.landscape.normalLocation, 3, gl.FLOAT, false, 8 * 4, 3 * 4);
+		gl.vertexAttribPointer(this.landscape.uvLocation, 2, gl.FLOAT, false, 8 * 4, 6 * 4);
 
 		const P = this.pMatrix;
-
-		let V = this.camera.getViewMatrix();
+		const V = this.camera.getViewMatrix();
 
 		let M = matrix4.identity();
 		M = matrix4.translate(
@@ -300,7 +334,6 @@ export default class Scene {
 		gl.uniform1i(this.landscape.textureLocation, 0);
 
 		gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.landscape.indexBuffer);
-
 		gl.drawElements(gl.TRIANGLES, this.landscape.index.length, gl.UNSIGNED_SHORT, 0);
 	}
 
@@ -312,17 +345,9 @@ export default class Scene {
 
 		gl.enableVertexAttribArray(this.sky.positionLocation);
 		gl.bindBuffer(gl.ARRAY_BUFFER, this.sky.vertexBuffer);
-
-		const size3 = 3;
-		const floatBytes = 4;
-		const type = gl.FLOAT;
-		const normalize = false;
-		const stride = 3 * floatBytes;
-		const offset = 0;
-		gl.vertexAttribPointer(this.sky.positionLocation, size3, type, normalize, stride, offset);
+		gl.vertexAttribPointer(this.sky.positionLocation, 3, gl.FLOAT, false, 3 * 4, 0);
 
 		const P = this.pMatrix;
-
 		let V = this.camera.getViewMatrix();
 		//important
 		V[12] = 0;
@@ -338,5 +363,9 @@ export default class Scene {
 
 		gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.sky.indexBuffer);
 		gl.drawElements(gl.TRIANGLES, this.sky.index.length, gl.UNSIGNED_SHORT, 0);
+	}
+
+	private drawSceneObjects() {
+		this.sceneObjects.forEach(sceneObject => sceneObject.render());
 	}
 }
