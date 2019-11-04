@@ -74,7 +74,6 @@ export default class SceneObject {
 
 		image.addEventListener("load", () => {
 			this.texture = gl.createTexture();
-			gl.activeTexture(gl.TEXTURE0);
 			gl.bindTexture(gl.TEXTURE_2D, this.texture);
 
 			context.drawImage(image, 0, 0);
