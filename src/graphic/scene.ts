@@ -7,12 +7,9 @@ import Landscape from "../models/landscape";
 import LandscapeSceneObject from "../models/landscape-scene-object";
 import Sky from "../models/sky";
 import SkySceneObject from "../models/sky-scene-object";
-// @ts-ignore
-import house_map from "../models/house/house.jpg";
-import house_obj from "../models/house/house-obj";
-// @ts-ignore
-import cactus_map from "../models/cactus/cactus.jpg";
-import cactus_obj from "../models/cactus/cactus-obj";
+import houseObj from "../models/house/house-obj";
+import cactusObj from "../models/cactus/cactus-obj";
+import corsucantObj from "../models/corsucant/corsucant-obj";
 
 export default class Scene {
 	private landscape: Landscape;
@@ -88,15 +85,13 @@ export default class Scene {
 		]);
 
 		this.sceneObjects = [];
+		// prettier-ignore
+		const house = new SceneObject(gl, 
+			this.programObject, 
+			this.camera, 
+			this.projMatrix, 
+			houseObj, <HTMLImageElement>document.getElementById("house_texture"));
 
-		const house = new SceneObject(
-			gl,
-			this.programObject,
-			this.camera,
-			this.projMatrix,
-			house_obj,
-			house_map
-		);
 		house.matrixes = {
 			translation: [0.5, 0.1, 0.5],
 			rotation: [0, 0, 0],
@@ -109,8 +104,8 @@ export default class Scene {
 			this.programObject,
 			this.camera,
 			this.projMatrix,
-			cactus_obj,
-			cactus_map
+			cactusObj,
+			<HTMLImageElement>document.getElementById("cactus_texture")
 		);
 
 		cactus.matrixes = {
@@ -119,9 +114,40 @@ export default class Scene {
 			scale: [1 / 500, 1 / 500, 1 / 500]
 		};
 		this.sceneObjects.push(cactus);
+
+		const corsucant = new SceneObject(
+			gl,
+			this.programObject,
+			this.camera,
+			this.projMatrix,
+			corsucantObj,
+			<HTMLImageElement>document.getElementById("corsucant_texture")
+		);
+
+		corsucant.matrixes = {
+			translation: [0.3, 0.3, -0.3],
+			rotation: [0, 0, 0],
+			scale: [1 / 10000, 1 / 10000, 1 / 10000]
+		};
+		this.sceneObjects.push(corsucant);
+
+		const secondCorcusant = new SceneObject(
+			gl,
+			this.programObject,
+			this.camera,
+			this.projMatrix,
+			corsucantObj,
+			<HTMLImageElement>document.getElementById("corsucant_texture")
+		);
+		secondCorcusant.matrixes = {
+			translation: [0.3, 0.3, -0.2],
+			rotation: [0, 0, 0],
+			scale: [1 / 20000, 1 / 20000, 1 / 20000]
+		};
+		this.sceneObjects.push(secondCorcusant);
 	}
 
-	public drawScene() {
+	public render() {
 		const gl = this.gl;
 		gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 		gl.enable(gl.CULL_FACE);

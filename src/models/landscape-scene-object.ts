@@ -1,8 +1,6 @@
 import Landscape from "./landscape";
 import Camera from "../graphic/camera";
 import matrix4 from "../math/matrix4";
-// @ts-ignore
-import landscape_map from "../assets/images/landscape/landscape_texture.jpg";
 
 export default class LandscapeSceneObject {
 	private vertex: number[];
@@ -73,25 +71,22 @@ export default class LandscapeSceneObject {
 		const canvas = <HTMLCanvasElement>document.getElementById("canvas-handler");
 		const context = canvas.getContext("2d");
 
-		const image = new Image();
-		image.src = landscape_map;
-		image.addEventListener("load", () => {
-			context.drawImage(image, 0, 0);
-			this.texture = gl.createTexture();
-			gl.bindTexture(gl.TEXTURE_2D, this.texture);
-			gl.texImage2D(
-				gl.TEXTURE_2D,
-				0,
-				gl.RGBA,
-				gl.RGBA,
-				gl.UNSIGNED_BYTE,
-				context.getImageData(0, 0, image.width, image.height)
-			);
-			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.MIRRORED_REPEAT);
-			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.MIRRORED_REPEAT);
-			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-		});
+		const image = <HTMLImageElement>document.getElementById("landscape_texture");
+		context.drawImage(image, 0, 0);
+		this.texture = gl.createTexture();
+		gl.bindTexture(gl.TEXTURE_2D, this.texture);
+		gl.texImage2D(
+			gl.TEXTURE_2D,
+			0,
+			gl.RGBA,
+			gl.RGBA,
+			gl.UNSIGNED_BYTE,
+			context.getImageData(0, 0, image.width, image.height)
+		);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.MIRRORED_REPEAT);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.MIRRORED_REPEAT);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
 	}
 
 	public render() {
@@ -134,6 +129,9 @@ export default class LandscapeSceneObject {
 		gl.uniform3fv(this.lightPosLocation, this.lightPos);
 		gl.uniformMatrix4fv(this.mpLocation, false, MP);
 		gl.uniformMatrix4fv(this.mvpLocation, false, MVP);
+
+		gl.activeTexture(gl.TEXTURE0);
+		gl.bindTexture(gl.TEXTURE_2D, this.texture);
 		gl.uniform1i(this.textureLocation, 0);
 
 		gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);

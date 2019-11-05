@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<meta http-equiv="X-UA-Compatible" content="ie=edge" />
+		<title>Virtual Reality Course</title>
+		<!-- Шейдеры ландшафта -->
+		<script id="landscape-vertex-shader" type="notjs">
+			// Значения вершин
+			attribute vec3 a_position;
+			// Значения нормалей
+			attribute vec3 a_normal;
+			// Значения текстурных координат
+			attribute vec2 a_uv;
+
+			// Матрица трансформации
+			uniform mat4 u_MVP;
+
+			uniform mat4 u_MV;
+
+			// Передаем координаты во фрагментный шейдер
+			varying vec4 v_position;
+			// Передаем нормали во фрагментный шейдер
+			varying vec3 v_normal;
+			// Передаем UV во фрагментный шейдер
+			varying vec2 v_uv;
+
+			void main() {
+
+			    //Прокидываем переменные
+			    v_uv = a_uv;
+			    v_normal = a_normal;
+			    // Трансформируем вершины и прокидываем во фрагментный шейдер
+			    v_position = u_MV * vec4(a_position, 1);
+
+			    //устанавливаем позиции вершин
+			    gl_Position = u_MVP * vec4(a_position, 1);
+			}
+		</script>
+		<script id="landscape-fragment-shader" type="notjs">
+			// Устанавливаем точность
+			precision mediump float;
+
+			// Передача текстуры
+			uniform sampler2D u_landscape;
+
+			// Позиция света
+			uniform vec3 u_lightPos;
+
+			// Получаем координаты
+			varying vec4 v_position;
+			// Получаем нормали
+			varying vec3 v_normal;
+			// Получаем UV (вершинные координаты)
+			varying vec2 v_uv;
+
+			void main() {
+			  // нормированная позиция света
+			  vec3 lightToPos = normalize(u_lightPos - v_position.xyz);
+
+			  // Устанавливаем цвет в соответствии с текстурой
+			  vec4 color = texture2D(u_landscape, v_uv);
+
+			  // Устанавливаем cвет
+			  float ambientStrength = 0.15;
+			  // цвет света
+			  vec3 lightColor = vec3(1.0, 1.0, 1.0);
+			  vec3 ambient = ambientStrength * lightColor;
+			  float diff = max(dot(v_normal, lightToPos), 0.0);
+
+			  gl_FragColor = color * vec4(ambient, 1.0) + color * diff;
+			}
+		</script>
+
+		<!-- Шейдеры неба -->
+		<script id="sky-vertex-shader" type="notjs">
+			// Значения вершин
+			attribute vec3 a_position;
+
+			uniform mat4 u_MVP;
+
+			// Передаем текстурные координаты
+			varying vec3 v_texCoord;
+
+			void main() {
+			  v_texCoord = vec3(-a_position.x, a_position.y, a_position.z);
+
+			  gl_Position = u_MVP * vec4(a_position, 1);
+			}
+		</script>
+		<script id="sky-fragment-shader" type="notjs">
+			// Устанавливаем точность
+			precision mediump float;
+
+			// Передача текстуры (кубической)
+			uniform samplerCube u_skybox;
+
+			// Получаем координаты
+			varying vec3 v_texCoord;
+
+			void main() {
+			  gl_FragColor = textureCube(u_skybox, v_texCoord);
+			}
+		</script>
+
+		<!-- Шейдеры объектов сцены -->
+		<script id="object-vertex-shader" type="notjs">
+			// Значения вершин
+			attribute vec3 a_position;
+
+			// Значения текстурных координат
+			attribute vec2 a_uv;
+
+			// Матрица трансформации
+			uniform mat4 u_MP;
+
+			// Передаем UV во фрагментный шейдер
+			varying vec2 v_uv;
+
+			void main() {
+
+				//Прокидываем переменные
+				v_uv = a_uv;
+				//устанавливаем позиции вершин
+				gl_Position = u_MP * vec4(a_position, 1);
+			}
+		</script>
+		<script id="object-fragment-shader" type="notjs">
+			// Устанавливаем точность
+			precision mediump float;
+
+			// Передача текстуры
+			uniform sampler2D u_texture;
+
+			// Получаем UV (вершинные координаты)
+			varying vec2 v_uv;
+
+			void main() {
+
+				// Устанавливаем цвет в соответствии с текстурой
+			  gl_FragColor = texture2D(u_texture, v_uv);
+			}
+		</script>
+	</head>
+	<body id="body">
+		<!-- canvas с самой графикой -->
+		<canvas id="canvas" tabindex="1"></canvas>
+		<!-- canvas для обработки изображенмй -->
+		<canvas hidden id="canvas-handler"></canvas>
+		<!-- ландшафт -->
+		<img hidden id="landscape" src="assets/images/landscape/landscape_height_map.jpg" />
+	</body>
+	<script type="text/javascript" src="app.js"></script>
+</html>

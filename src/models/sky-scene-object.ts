@@ -54,9 +54,6 @@ export default class SkySceneObject {
 		gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
 		gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.vertex), gl.STATIC_DRAW);
 
-		this.texture = gl.createTexture();
-		gl.bindTexture(gl.TEXTURE_CUBE_MAP, this.texture);
-
 		const canvas = <HTMLCanvasElement>document.getElementById("canvas-handler");
 		const context = canvas.getContext("2d");
 
@@ -68,6 +65,9 @@ export default class SkySceneObject {
 			canvas.height = image.height;
 
 			context.drawImage(image, 0, 0);
+			this.texture = gl.createTexture();
+			gl.activeTexture(gl.TEXTURE0);
+			gl.bindTexture(gl.TEXTURE_CUBE_MAP, this.texture);
 
 			const cubeFaces = [
 				{

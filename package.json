@@ -5,6 +5,8 @@
 	"private": true,
 	"scripts": {
 		"start": "webpack-dev-server",
+		"webpack": "webpack --config webpack.config.js",
+		"lint": "eslint src/**",
 		"test": "echo \"Error: no test specified\" && exit 1"
 	},
 	"repository": {

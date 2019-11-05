@@ -47,9 +47,9 @@ export default class Landscape {
 			translation: [-0.5, 0, -0.5],
 			rotation: [0, 0, 0],
 			scale: [
-				1 / this.middleCoordinate,
+				2 / this.middleCoordinate,
 				this.yCoordinateMultiplayer / 255,
-				1 / this.middleCoordinate
+				2 / this.middleCoordinate
 			]
 		};
 	}

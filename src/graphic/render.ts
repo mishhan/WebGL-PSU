@@ -32,13 +32,12 @@ export default class Render {
 		if (!this.gl) {
 			throw Error(`Browser doesn't support WebGL`);
 		}
+		const gl = this.gl;
+		gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 	}
 
 	public render() {
-		const gl = this.gl;
-		gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
-		this.scene.drawScene();
-
+		this.scene.render();
 		requestAnimationFrame(this.render.bind(this));
 	}
 }
