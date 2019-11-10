@@ -1,4 +1,4 @@
-import vector from "../math/vector";
+import vector from "../../math/vector";
 
 export default class Landscape {
 	private middleCoordinate: number;

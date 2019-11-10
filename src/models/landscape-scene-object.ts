@@ -1,6 +1,8 @@
-import Landscape from "./landscape";
+import Landscape from "./environment/landscape";
 import Camera from "../graphic/camera";
 import matrix4 from "../math/matrix4";
+// @ts-ignore
+import landscapeImage from "../assets/images/landscape/landscape.jpg";
 
 export default class LandscapeSceneObject {
 	private vertex: number[];
@@ -68,31 +70,22 @@ export default class LandscapeSceneObject {
 		gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
 		gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.vertex), gl.STATIC_DRAW);
 
-		const canvas = <HTMLCanvasElement>document.getElementById("canvas-handler");
-		const context = canvas.getContext("2d");
-
-		const image = <HTMLImageElement>document.getElementById("landscape_texture");
-		context.drawImage(image, 0, 0);
-		this.texture = gl.createTexture();
-		gl.bindTexture(gl.TEXTURE_2D, this.texture);
-		gl.texImage2D(
-			gl.TEXTURE_2D,
-			0,
-			gl.RGBA,
-			gl.RGBA,
-			gl.UNSIGNED_BYTE,
-			context.getImageData(0, 0, image.width, image.height)
-		);
-		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.MIRRORED_REPEAT);
-		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.MIRRORED_REPEAT);
-		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+		const image = new Image();
+		image.src = landscapeImage;
+		image.addEventListener("load", () => {
+			this.texture = gl.createTexture();
+			gl.bindTexture(gl.TEXTURE_2D, this.texture);
+			gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.MIRRORED_REPEAT);
+			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.MIRRORED_REPEAT);
+			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+		});
 	}
 
 	public render() {
 		const gl = this.gl;
 		gl.useProgram(this.program);
-		gl.enable(gl.DEPTH_TEST);
 
 		gl.enableVertexAttribArray(this.positionLocation);
 		gl.enableVertexAttribArray(this.normalLocation);

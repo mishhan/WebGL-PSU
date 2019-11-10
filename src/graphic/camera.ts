@@ -1,10 +1,9 @@
-import Landscape from "../models/landscape";
+import Landscape from "../models/environment/landscape";
 import math from "../math/math-extension";
 import matrix4 from "../math/matrix4";
 
 export default class Camera {
 	private landscape: Landscape;
-	private useQuaternion: boolean;
 
 	private heightUnder: number;
 	private position: {
@@ -18,27 +17,14 @@ export default class Camera {
 		pitch: number;
 		roll: number;
 	};
-	private quaternionOrientation: {
-		x: number;
-		y: number;
-		z: number;
-		w: number;
-	};
 
 	constructor() {
-		this.useQuaternion = false;
 		this.tightBrayan = {
 			yaw: 0,
 			pitch: 0,
 			roll: 0
 		};
 		this.heightUnder = 300;
-		this.quaternionOrientation = {
-			x: 0,
-			y: 0,
-			z: 0,
-			w: 0
-		};
 	}
 
 	public getViewMatrix(): number[] {
@@ -59,20 +45,16 @@ export default class Camera {
 	}
 
 	public move(delta: number): void {
-		if (!this.useQuaternion) {
-			this.position.x += Math.sin(this.tightBrayan.yaw) * delta;
-			this.position.z -= Math.cos(this.tightBrayan.yaw) * delta;
-			this.position = this.landscape.constrain(this.position);
-		}
+		this.position.x += Math.sin(this.tightBrayan.yaw) * delta;
+		this.position.z -= Math.cos(this.tightBrayan.yaw) * delta;
+		this.position = this.landscape.constrain(this.position);
 	}
 
 	public strafe(delta: number): void {
-		if (!this.useQuaternion) {
-			const a = this.tightBrayan.yaw - Math.PI / 2.0;
-			this.position.x += Math.sin(a) * delta;
-			this.position.z -= Math.cos(a) * delta;
-			this.position = this.landscape.constrain(this.position);
-		}
+		const a = this.tightBrayan.yaw - Math.PI / 2.0;
+		this.position.x += Math.sin(a) * delta;
+		this.position.z -= Math.cos(a) * delta;
+		this.position = this.landscape.constrain(this.position);
 	}
 
 	public yaw(angle: number): void {

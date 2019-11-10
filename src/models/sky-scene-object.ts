@@ -1,8 +1,8 @@
 import Camera from "../graphic/camera";
-import Sky from "./sky";
+import Sky from "./environment/sky";
 import matrix4 from "../math/matrix4";
 // @ts-ignore
-import skybox_cubemap from "../assets/images/sky/skybox_cubemap.jpg";
+import skyboxImage from "../assets/images/sky/skybox.jpg";
 
 export default class SkySceneObject {
 	private vertex: number[];
@@ -58,7 +58,7 @@ export default class SkySceneObject {
 		const context = canvas.getContext("2d");
 
 		const image = new Image();
-		image.src = skybox_cubemap;
+		image.src = skyboxImage;
 		image.addEventListener("load", () => {
 			const sideLength = image.width / 4;
 			canvas.width = image.width;
@@ -109,9 +109,7 @@ export default class SkySceneObject {
 
 	public render() {
 		const gl = this.gl;
-
 		gl.useProgram(this.program);
-		gl.disable(gl.DEPTH_TEST);
 
 		gl.enableVertexAttribArray(this.positionLocation);
 		gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
