@@ -39,6 +39,9 @@ export default class Controller {
 			isDown = true;
 
 			isCatched = this.walker.tryCatch(event.clientX, event.clientY);
+			console.info(`Is object catched? ${isCatched}`);
+			//change cursor to understand that we catched something
+			document.body.style.cursor = isCatched ? "move" : "default";
 		});
 
 		this.canvas.addEventListener("mousemove", (event: MouseEvent) => {

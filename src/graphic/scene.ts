@@ -3,19 +3,12 @@ import matrix4 from "../math/matrix4";
 import angle from "../math/angle";
 import Camera from "./camera";
 import SceneObject from "../models/scene-object";
+import SceneInitializer from "../initializers/scene-initializer";
+
 import Landscape from "../models/environment/landscape";
 import LandscapeSceneObject from "../models/landscape-scene-object";
 import Sky from "../models/environment/sky";
 import SkySceneObject from "../models/sky-scene-object";
-import houseObj from "../models/house/house-obj";
-import cactusObj from "../models/cactus/cactus-obj";
-import corsucantObj from "../models/corsucant/corsucant-obj";
-// @ts-ignore
-import houseImage from "../models/house/house.jpg";
-// @ts-ignore
-import cactusImage from "../models/cactus/cactus.jpg";
-// @ts-ignore
-import corsucantImage from "../models/corsucant/corsucant.jpg";
 
 export default class Scene {
 	private landscape: Landscape;
@@ -33,13 +26,15 @@ export default class Scene {
 	private gl: WebGLRenderingContext;
 	private programLandscape: WebGLProgram;
 	private programSky: WebGLProgram;
-	private programObject: WebGLProgram;
 
 	constructor(gl: WebGLRenderingContext, camera: Camera) {
 		this.gl = gl;
 		this.camera = camera;
 		this.initScene();
-		this.initSceneObjects();
+		//get scene-objects from initializer
+		const sceneInitializer = new SceneInitializer(this.gl, this.camera, this.projMatrix);
+		this.sceneObjects = sceneInitializer.SceneObjects;
+
 		this.initFakeSceneObjects();
 	}
 
@@ -116,78 +111,6 @@ export default class Scene {
 		/* camera props */
 		this.camera.Landscape = this.landscape;
 		this.camera.initPosition();
-	}
-
-	private initSceneObjects() {
-		const gl = this.gl;
-		this.programObject = webglUtils.createProgramFromScripts(gl, [
-			"object-vertex-shader",
-			"object-fragment-shader"
-		]);
-
-		this.sceneObjects = [];
-		// prettier-ignore
-		const house = new SceneObject(gl, 
-			this.programObject, 
-			this.camera, 
-			this.projMatrix, 
-			houseObj, 
-			houseImage);
-
-		house.Matrixes = {
-			translation: [0.5, 0.1, 0.5],
-			rotation: [0, 0, 0],
-			scale: [1 / 50, 1 / 50, 1 / 50]
-		};
-		this.sceneObjects.push(house);
-
-		const cactus = new SceneObject(
-			gl,
-			this.programObject,
-			this.camera,
-			this.projMatrix,
-			cactusObj,
-			cactusImage
-		);
-
-		cactus.Matrixes = {
-			translation: [-0.5, 0.1, -0.5],
-			rotation: [200, 0, 0],
-			scale: [1 / 500, 1 / 500, 1 / 500]
-		};
-		this.sceneObjects.push(cactus);
-
-		const corsucant = new SceneObject(
-			gl,
-			this.programObject,
-			this.camera,
-			this.projMatrix,
-			corsucantObj,
-			corsucantImage,
-			true
-		);
-
-		corsucant.Matrixes = {
-			translation: [0.3, 0.3, -0.3],
-			rotation: [0, 0, 0],
-			scale: [1 / 10000, 1 / 10000, 1 / 10000]
-		};
-		this.sceneObjects.push(corsucant);
-
-		const secondCorcusant = new SceneObject(
-			gl,
-			this.programObject,
-			this.camera,
-			this.projMatrix,
-			corsucantObj,
-			corsucantImage
-		);
-		secondCorcusant.Matrixes = {
-			translation: [0.3, 0.3, -0.2],
-			rotation: [0, 0, 0],
-			scale: [1 / 20000, 1 / 20000, 1 / 20000]
-		};
-		this.sceneObjects.push(secondCorcusant);
 	}
 
 	private initFakeSceneObjects() {
