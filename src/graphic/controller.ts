@@ -10,6 +10,7 @@ export default class Controller {
 		this.walker = walker;
 
 		this.initListeners();
+		this.initSocket();
 	}
 
 	private initListeners() {
@@ -68,5 +69,22 @@ export default class Controller {
 			this.canvas.width = document.getElementById("body").clientWidth;
 			this.canvas.height = document.getElementById("body").clientHeight;
 		});
+	}
+
+	private initSocket() {
+		const socket = new WebSocket("ws://127.0.0.1:8080");
+		socket.onopen = () => console.log("socket connection is open");
+		socket.onmessage = data => {
+			const quaternion = JSON.parse(data.data);
+			this.walker.rotateWonderfulObject(quaternion);
+		};
+		socket.onerror = error => console.error(error);
+		socket.onclose = data => {
+			if (data.wasClean) {
+				console.info("socket connection closed clearly");
+			} else {
+				console.info("disconnect");
+			}
+		};
 	}
 }

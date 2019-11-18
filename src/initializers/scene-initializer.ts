@@ -1,5 +1,6 @@
 import webglUtils from "../utils/webglUtils";
 import SceneObject from "../models/scene-object";
+import ReliefSceneObject from "../models/relief-scene-object";
 import Camera from "../graphic/camera";
 
 import houseObj from "../models/house/house-obj";
@@ -9,6 +10,8 @@ import characterObj from "../models/character/character-obj";
 // @ts-ignore
 import houseImage from "../models/house/house.jpg";
 // @ts-ignore
+import houseReliefImage from "../models/house/house_normal.jpg";
+// @ts-ignore
 import cactusImage from "../models/cactus/cactus.jpg";
 // @ts-ignore
 import corsucantImage from "../models/corsucant/corsucant.jpg";
@@ -16,15 +19,16 @@ import corsucantImage from "../models/corsucant/corsucant.jpg";
 import characterImage from "../models/character/character.jpg";
 
 export default class SceneInitializer {
-	private sceneObjects: SceneObject[];
+	private sceneObjects: (SceneObject | ReliefSceneObject)[];
 
 	private projMatrix: number[];
 	private camera: Camera;
 
 	private gl: WebGLRenderingContext;
 	private programObject: WebGLProgram;
+	private programReliefObject: WebGLProgram;
 
-	public get SceneObjects(): SceneObject[] {
+	public get SceneObjects(): any[] {
 		return this.sceneObjects;
 	}
 
@@ -32,16 +36,36 @@ export default class SceneInitializer {
 		this.gl = gl;
 		this.camera = camera;
 		this.projMatrix = projMatrix;
+
 		this.programObject = webglUtils.createProgramFromScripts(gl, [
 			"object-vertex-shader",
 			"object-fragment-shader"
 		]);
+
+		/*
+		this.programReliefObject = webglUtils.createProgramFromScripts(gl, [
+			"relief-object-vertex-shader",
+			"relief-object-fragment-shader"
+		]);
+		*/
+
 		this.sceneObjects = [];
 
 		this.initSceneObjects();
 	}
 
 	private initSceneObjects() {
+		/*
+		const house = new ReliefSceneObject(
+			this.gl,
+			this.programReliefObject,
+			this.camera,
+			this.projMatrix,
+			houseObj,
+			houseImage,
+			houseReliefImage
+		);
+		*/
 		const house = new SceneObject(
 			this.gl,
 			this.programObject,

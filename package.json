@@ -5,7 +5,8 @@
 	"private": true,
 	"scripts": {
 		"start": "webpack-dev-server",
-		"webpack": "webpack --config webpack.config.js",
+		"build": "webpack --config webpack.config.js",
+		"launch": "node server.js",
 		"lint": "eslint src/**",
 		"test": "echo \"Error: no test specified\" && exit 1"
 	},
@@ -37,6 +38,7 @@
 		"webpack-dev-server": "^3.9.0"
 	},
 	"dependencies": {
-		"webgl-obj-loader": "^2.0.6"
+		"webgl-obj-loader": "^2.0.6",
+		"ws": "^7.2.0"
 	}
 }

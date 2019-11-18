@@ -322,105 +322,40 @@ export default class Matrix4 {
 		return out;
 	}
 
-	static determinant(a: number[]): number {
-		let a00 = a[0],
-			a01 = a[1],
-			a02 = a[2],
-			a03 = a[3];
-		let a10 = a[4],
-			a11 = a[5],
-			a12 = a[6],
-			a13 = a[7];
-		let a20 = a[8],
-			a21 = a[9],
-			a22 = a[10],
-			a23 = a[11];
-		let a30 = a[12],
-			a31 = a[13],
-			a32 = a[14],
-			a33 = a[15];
-		let b00 = a00 * a11 - a01 * a10;
-		let b01 = a00 * a12 - a02 * a10;
-		let b02 = a00 * a13 - a03 * a10;
-		let b03 = a01 * a12 - a02 * a11;
-		let b04 = a01 * a13 - a03 * a11;
-		let b05 = a02 * a13 - a03 * a12;
-		let b06 = a20 * a31 - a21 * a30;
-		let b07 = a20 * a32 - a22 * a30;
-		let b08 = a20 * a33 - a23 * a30;
-		let b09 = a21 * a32 - a22 * a31;
-		let b10 = a21 * a33 - a23 * a31;
-		let b11 = a22 * a33 - a23 * a32;
-		// Calculate the determinant
-		return b00 * b11 - b01 * b10 + b02 * b09 + b03 * b08 - b04 * b07 + b05 * b06;
-	}
-
-	static normalize(a: number[]): number[] {
-		let determinant = Matrix4.determinant(a);
-		a.forEach(item => item / determinant);
-		return a;
-	}
-
-	static rotateOn(a: number[], rad: number, axis: number[]): number[] {
+	static fromQuat(q: number[]): number[] {
 		let out: number[] = [].fill(0, 0, 15);
-		let x = axis[0],
-			y = axis[1],
-			z = axis[2];
-		let len = Math.hypot(x, y, z);
-		let s, c, t;
-		let a00, a01, a02, a03;
-		let a10, a11, a12, a13;
-		let a20, a21, a22, a23;
-		let b00, b01, b02;
-		let b10, b11, b12;
-		let b20, b21, b22;
-		len = 1 / len;
-		x *= len;
-		y *= len;
-		z *= len;
-		s = Math.sin(rad);
-		c = Math.cos(rad);
-		t = 1 - c;
-		a00 = a[0];
-		a01 = a[1];
-		a02 = a[2];
-		a03 = a[3];
-		a10 = a[4];
-		a11 = a[5];
-		a12 = a[6];
-		a13 = a[7];
-		a20 = a[8];
-		a21 = a[9];
-		a22 = a[10];
-		a23 = a[11];
-		// Construct the elements of the rotation matrix
-		b00 = x * x * t + c;
-		b01 = y * x * t + z * s;
-		b02 = z * x * t - y * s;
-		b10 = x * y * t - z * s;
-		b11 = y * y * t + c;
-		b12 = z * y * t + x * s;
-		b20 = x * z * t + y * s;
-		b21 = y * z * t - x * s;
-		b22 = z * z * t + c;
-		// Perform rotation-specific matrix multiplication
-		out[0] = a00 * b00 + a10 * b01 + a20 * b02;
-		out[1] = a01 * b00 + a11 * b01 + a21 * b02;
-		out[2] = a02 * b00 + a12 * b01 + a22 * b02;
-		out[3] = a03 * b00 + a13 * b01 + a23 * b02;
-		out[4] = a00 * b10 + a10 * b11 + a20 * b12;
-		out[5] = a01 * b10 + a11 * b11 + a21 * b12;
-		out[6] = a02 * b10 + a12 * b11 + a22 * b12;
-		out[7] = a03 * b10 + a13 * b11 + a23 * b12;
-		out[8] = a00 * b20 + a10 * b21 + a20 * b22;
-		out[9] = a01 * b20 + a11 * b21 + a21 * b22;
-		out[10] = a02 * b20 + a12 * b21 + a22 * b22;
-		out[11] = a03 * b20 + a13 * b21 + a23 * b22;
-
-		out[12] = a[12];
-		out[13] = a[13];
-		out[14] = a[14];
-		out[15] = a[15];
+		let x = q[0],
+			y = q[1],
+			z = q[2],
+			w = q[3];
+		let x2 = x + x;
+		let y2 = y + y;
+		let z2 = z + z;
+		let xx = x * x2;
+		let yx = y * x2;
+		let yy = y * y2;
+		let zx = z * x2;
+		let zy = z * y2;
+		let zz = z * z2;
+		let wx = w * x2;
+		let wy = w * y2;
+		let wz = w * z2;
+		out[0] = 1 - yy - zz;
+		out[1] = yx + wz;
+		out[2] = zx - wy;
+		out[3] = 0;
+		out[4] = yx - wz;
+		out[5] = 1 - xx - zz;
+		out[6] = zy + wx;
+		out[7] = 0;
+		out[8] = zx + wy;
+		out[9] = zy - wx;
+		out[10] = 1 - xx - yy;
+		out[11] = 0;
+		out[12] = 0;
+		out[13] = 0;
+		out[14] = 0;
+		out[15] = 1;
 		return out;
 	}
 

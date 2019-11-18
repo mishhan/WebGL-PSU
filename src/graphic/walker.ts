@@ -1,6 +1,7 @@
 import Camera from "./camera";
 import Scene from "./scene";
 import SceneObject from "../models/scene-object";
+import Matrix4 from "../math/matrix4";
 
 export default class Walker {
 	private gl: WebGLRenderingContext;
@@ -35,6 +36,11 @@ export default class Walker {
 
 	public rotateCatchedObject(angleX: number, angleY: number): void {
 		this.catchedObject.rotate(angleX, angleY);
+	}
+
+	public rotateWonderfulObject(quaternion: any): void {
+		this.scene.WonderfulObject.IsCatched = true;
+		this.scene.WonderfulObject.RotationMatrix = Matrix4.fromQuat(quaternion);
 	}
 
 	public tryCatch(xCoordinate: number, yCoordinate: number): boolean {

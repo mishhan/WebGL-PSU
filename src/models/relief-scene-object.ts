@@ -1,12 +1,15 @@
 import Camera from "../graphic/camera";
 import matrix4 from "../math/matrix4";
+import Vector from "../math/vector";
 
 const OBJ = require("webgl-obj-loader");
 
-export default class SceneObject {
+export default class ReliefSceneObject {
 	private vertex: number[];
 	private index: number[];
+	private normal: number[];
 	private uv: number[];
+	private tangent: number[];
 
 	private matrixes: {
 		translation: number[];
@@ -14,23 +17,22 @@ export default class SceneObject {
 		scale: number[];
 	};
 
-	private rotationMatrix: number[];
-	private isCatched: boolean;
-	private isTurnable: boolean;
-
 	private vertexBuffer: WebGLBuffer;
 	private indexBuffer: WebGLBuffer;
+	private normalBuffer: WebGLBuffer;
 	private uvBuffer: WebGLBuffer;
+	private tangentBuffer: WebGLBuffer;
 
 	private texture: WebGLTexture;
+	private reliefTexture: WebGLTexture;
 	private textureLocation: WebGLUniformLocation;
+	private reliefTextureLocation: WebGLUniformLocation;
 
 	private positionLocation: number;
+	private normalLocation: number;
 	private uvLocation: number;
+	private tangentLocation: number;
 	private mpLocation: WebGLUniformLocation;
-
-	private fakeColorLocation: WebGLUniformLocation;
-	private isFakeLocation: WebGLUniformLocation;
 
 	private gl: WebGLRenderingContext;
 	private program: WebGLProgram;
@@ -44,7 +46,7 @@ export default class SceneObject {
 		projMatrix: number[],
 		obj: string,
 		imageUrl: string,
-		isTurnable: boolean = false
+		reliefImageUrl: string
 	) {
 		/* read data from obj */
 		const mesh = new OBJ.Mesh(obj);
@@ -57,20 +59,15 @@ export default class SceneObject {
 		this.program = program;
 		this.camera = camera;
 		this.projMatrix = projMatrix;
-		this.isTurnable = isTurnable;
-
-		/* set values for rotating */
-		this.rotationMatrix = matrix4.identity();
-		this.isCatched = false;
 
 		/* init webgl data */
 		this.positionLocation = gl.getAttribLocation(program, "a_position");
+		this.normalLocation = gl.getAttribLocation(program, "a_normal");
 		this.uvLocation = gl.getAttribLocation(program, "a_uv");
+		this.tangentLocation = gl.getAttribLocation(program, "a_tangent");
 		this.mpLocation = gl.getUniformLocation(program, "u_MP");
 		this.textureLocation = gl.getUniformLocation(program, "u_texture");
-
-		this.isFakeLocation = gl.getUniformLocation(program, "is_fake");
-		this.fakeColorLocation = gl.getUniformLocation(program, "fake_color");
+		this.reliefTextureLocation = gl.getUniformLocation(program, "u_normalMap");
 
 		this.indexBuffer = gl.createBuffer();
 		gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
@@ -80,9 +77,18 @@ export default class SceneObject {
 		gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
 		gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.vertex), gl.STATIC_DRAW);
 
+		this.normalBuffer = gl.createBuffer();
+		gl.bindBuffer(gl.ARRAY_BUFFER, this.normalBuffer);
+		gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.normal), gl.STATIC_DRAW);
+
 		this.uvBuffer = gl.createBuffer();
 		gl.bindBuffer(gl.ARRAY_BUFFER, this.uvBuffer);
 		gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.uv), gl.STATIC_DRAW);
+
+		this.tangent = this.calculateTangent();
+		this.tangentBuffer = gl.createBuffer();
+		gl.bindBuffer(gl.ARRAY_BUFFER, this.tangentBuffer);
+		gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.tangent), gl.STATIC_DRAW);
 
 		const image = new Image();
 		image.src = imageUrl;
@@ -97,45 +103,27 @@ export default class SceneObject {
 			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
 			gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
 		});
-	}
 
-	public render() {
-		this._render();
-	}
+		const reliefImage = new Image();
+		reliefImage.src = reliefImageUrl;
+		reliefImage.addEventListener("load", () => {
+			this.reliefTexture = gl.createTexture();
+			gl.bindTexture(gl.TEXTURE_2D, this.reliefTexture);
 
-	public fakeRender(color: number[]) {
-		this._render(true, color);
-	}
+			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.MIRRORED_REPEAT);
+			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.MIRRORED_REPEAT);
 
-	public get IsTurnable(): boolean {
-		return this.isTurnable;
-	}
-
-	public set IsCatched(isCatched: boolean) {
-		this.isCatched = isCatched;
-	}
-
-	public get RotationMatrix(): number[] {
-		return this.rotationMatrix;
-	}
-
-	public set RotationMatrix(matrix: number[]) {
-		this.rotationMatrix = matrix;
+			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+			gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, reliefImage);
+		});
 	}
 
 	public set Matrixes(matrixes: any) {
 		this.matrixes = matrixes;
 	}
 
-	public rotate(angleX: number, angleY: number): void {
-		let r = this.rotationMatrix;
-		r = matrix4.multiply(r, matrix4.fromRotation(angleX, [r[1], r[5], r[9]]));
-		r = matrix4.multiply(r, matrix4.fromRotation(angleY, [r[0], r[4], r[8]]));
-		//r = matrix4.normalize(r);
-		this.rotationMatrix = r;
-	}
-
-	private _render(isFake: boolean = false, fakeColor: number[] = [0, 0, 0]) {
+	public render() {
 		const gl = this.gl;
 		gl.useProgram(this.program);
 
@@ -169,21 +157,87 @@ export default class SceneObject {
 		let MVP = matrix4.multiply(P, V);
 		MVP = matrix4.multiply(MVP, M);
 
-		if (this.isCatched) {
-			MVP = matrix4.multiply(MVP, this.rotationMatrix);
-		}
-
 		gl.uniformMatrix4fv(this.mpLocation, false, MVP);
+
 		gl.activeTexture(gl.TEXTURE0);
 		gl.bindTexture(gl.TEXTURE_2D, this.texture);
-
 		gl.uniform1i(this.textureLocation, 0);
 
-		/* logic fake drowing */
-		gl.uniform1i(this.isFakeLocation, isFake === false ? 0 : 1);
-		gl.uniform3fv(this.fakeColorLocation, fakeColor);
+		gl.activeTexture(gl.TEXTURE0 + 1);
+		gl.bindTexture(gl.TEXTURE_2D, this.reliefTexture);
+		gl.uniform1i(this.reliefTextureLocation, 1);
 
 		gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
 		gl.drawElements(gl.TRIANGLES, this.index.length, gl.UNSIGNED_SHORT, 0);
+	}
+
+	private calculateTangent(): number[] {
+		let buffer: number[] = [].fill(0, 0, this.index.length * 3 - 1);
+
+		for (let i = 0; i < this.index.length; i += 3) {
+			const eo1 = [
+				this.vertex[this.iX(i, 1)] - this.vertex[this.iX(i, 0)],
+				this.vertex[this.iY(i, 1)] - this.vertex[this.iZ(i, 0)],
+				this.vertex[this.iY(i, 1)] - this.vertex[this.iZ(i, 0)]
+			];
+
+			const eo2 = [
+				this.vertex[this.iX(i, 2)] - this.vertex[this.iX(i, 0)],
+				this.vertex[this.iY(i, 2)] - this.vertex[this.iZ(i, 0)],
+				this.vertex[this.iY(i, 2)] - this.vertex[this.iZ(i, 0)]
+			];
+
+			const et1 = [
+				this.uv[this.iU(i, 1)] - this.uv[this.iU(i, 0)],
+				this.uv[this.iV(i, 1)] - this.uv[this.iV(i, 0)]
+			];
+
+			const et2 = [
+				this.uv[this.iU(i, 2)] - this.uv[this.iU(i, 0)],
+				this.uv[this.iV(i, 2)] - this.uv[this.iV(i, 0)]
+			];
+
+			const f = 1.0 / (et1[0] * et2[1] - et2[0] * et1[1]);
+
+			let tangent = [
+				f * (et2[1] * eo1[0] - et1[1] * eo2[0]),
+				f * (et2[1] * eo1[1] - et1[1] * eo2[1]),
+				f * (et2[1] * eo1[2] - et1[1] * eo2[2])
+			];
+			tangent = Vector.normalize(tangent);
+
+			for (let j = 0; j < 3; j++) {
+				let t = [buffer[this.iX(j, 0)], buffer[this.iY(j, 0)], buffer[this.iZ(j, 0)]];
+
+				t = Vector.add(t, tangent);
+				t = Vector.normalize(t);
+
+				buffer[this.iX(j, 0)] = t[0];
+				buffer[this.iY(j, 0)] = t[1];
+				buffer[this.iZ(j, 0)] = t[2];
+			}
+		}
+
+		return buffer;
+	}
+
+	private iX(index: number, nmb: number): number {
+		return this.index[index + nmb] * 3 + 0;
+	}
+
+	private iY(index: number, nmb: number): number {
+		return this.index[index + nmb] * 3 + 1;
+	}
+
+	private iZ(index: number, nmb: number): number {
+		return this.index[index + nmb] * 3 + 2;
+	}
+
+	private iU(index: number, nmb: number): number {
+		return this.index[index + nmb] * 2 + 0;
+	}
+
+	private iV(index: number, nmb: number): number {
+		return this.index[index + nmb] * 2 + 1;
 	}
 }

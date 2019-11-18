@@ -18,6 +18,8 @@ export default class Scene {
 	private skySceneObject: SkySceneObject;
 
 	private sceneObjects: SceneObject[];
+	/* wondeful object */
+	private wonderfulObject: SceneObject;
 	private colorTable: Map<number, SceneObject>;
 
 	private projMatrix: number[];
@@ -34,7 +36,7 @@ export default class Scene {
 		//get scene-objects from initializer
 		const sceneInitializer = new SceneInitializer(this.gl, this.camera, this.projMatrix);
 		this.sceneObjects = sceneInitializer.SceneObjects;
-
+		this.wonderfulObject = this.sceneObjects[7];
 		this.initFakeSceneObjects();
 	}
 
@@ -69,6 +71,10 @@ export default class Scene {
 
 	public get ColorTable(): Map<number, SceneObject> {
 		return this.colorTable;
+	}
+
+	public get WonderfulObject(): SceneObject {
+		return this.wonderfulObject;
 	}
 
 	private initScene() {
