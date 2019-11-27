@@ -112,85 +112,93 @@
 		<!-- Scene relief object -->
 		<script id="relief-object-vertex-shader" type="notjs">
 			attribute vec3 a_position;
-			attribute vec2 a_uv;
 			attribute vec3 a_normal;
-			attribute vec3 a_tangent;
+			attribute vec3 a_tanget;
+			attribute vec3 a_bitangent;
+			attribute vec2 a_uv;
 
-			uniform mat4 u_MVP;
-			uniform mat4 u_MV;
-			uniform mat3 u_n;
+			uniform mat4 uViewMatrix;
+			uniform mat4 uModelMatrix;
+			uniform mat4 uProjectionMatrix;
+			uniform mat4 uNormalMatrix;
 
-			varying vec3 v_ray;
-			varying vec3 v_eye;
-			varying vec2 v_uv;
+			uniform vec3 lightPos;
+			uniform vec3 viewPos;
 
-			mat3 transpose(mat3 inMatrix) {
-				vec4 i0 = inMatrix[0];
-				vec4 i1 = inMatrix[1];
-				vec4 i2 = inMatrix[2];
+			varying highp vec2 vTextureCoord;
+			varying highp vec3 vFragPos;
 
-				mat3 outMatrix = mat3(
+			varying highp vec3 vTangentLightPos;
+			varying highp vec3 vTangentViewPos;
+			varying highp vec3 vTangentFragPos;
+
+			highp mat3 transpose(highp mat3 inMatrix) {
+				highp vec3 i0 = inMatrix[0];
+				highp vec3 i1 = inMatrix[1];
+				highp vec3 i2 = inMatrix[2];
+
+				highp mat3 outMatrix = mat3(
 					vec3(i0.x, i1.x, i2.x),
 					vec3(i0.y, i1.y, i2.y),
-					vec3(i0.z, i1.z, i2.z),
+					vec3(i0.z, i1.z, i2.z)
 				);
 
 				return outMatrix;
 			}
 
 			void main() {
-				vec4 pos = vec4(a_position, 1.0);
-				vec3 binormal = normalize(cross(a_normal, a_tangent));
+				gl_Position = uProjectionMatrix * uViewMatrix * uModelMatrix * vec4(a_position, 1.0);
 
-				vec3 T = (u_MV * vec4(a_tangent, 0)).xyz;
-				vec3 N = (u_MV * vec4(a_normal, 0)).xyz;
-				vec3 B = cross(N, T);
-				mat3 intbn = transpose(mat3(T, B, N));
+				vFragPos = vec3(uModelMatrix * vec4(a_position, 1.0));
+				vTextureCoord = a_uv;
 
-				vec3 vPos = intbn * (u_MV * pos).xyz;
+				vec3 T = normalize(vec3(uNormalMatrix * vec4(a_tanget, 1.0)));
+				vec3 N = normalize(vec3(uNormalMatrix * vec4(a_bitangent, 1.0)));
+				vec3 B = normalize(vec3(uNormalMatrix * vec4(a_bitangent, 1.0)));
 
-				v_ray = normalize(intbn * vec3(0, 1, 0) - vPos);
-				v_eye = normalize(-vPos);
+				mat3 tTBN = transpose(mat3(T, B, N));
 
-				v_uv = a_uv;
-				gl_Position = u_MVP * pos;
+				vTangentLightPos = tTBN * lightPos;
+				vTangentViewPos  = tTBN * viewPos;
+				vTangentFragPos  = tTBN * vFragPos;
 			}
 		</script>
 		<script id="relief-object-fragment-shader" type="notjs">
-			precision mediump float;
+			varying highp vec3 vFragPos;
+			varying highp vec2 vTextureCoord;
+			varying highp vec3 vTangentLightPos;
+			varying highp vec3 vTangentViewPos;
+			varying highp vec3 vTangentFragPos;
 
-			uniform sampler2D u_texture;
-			uniform sampler2D u_normalMap;
 
-			varying vec2 v_uv;
-			varying vec3 v_ray;
-			varying vec3 v_eye;
+			uniform sampler2D uSampler;
+			uniform sampler2D uNormals;
 
-			vec4 lit(float l, float h, float m) {
-				return vec4(1.0, max(l, 0.0), (l > 0.0) ? pow(max(0.0, h), m) : 0.0, 1.0);
-			}
+			varying mat3 vTBN;
+
+			highp vec3 lightColor = vec3(1, 1, 0.875);
 
 			void main() {
-				vec4 diffuseColor = texture2D(u_texture, v_uv);
-				vec3 normal = texture2D(u_normalMap, v_uv).rgb;
-				normal = 2 * normal - vec3(1);
-				normal = normalize(normal);
-				vec3 ray = normalize(v_ray);
-				var3 eye = normalize(v_eye);
-				vec3 halfVector = normalize(ray + eye);
+				vec3 normal = texture2D(uNormals, vTextureCoord).rgb;
+				normal = normalize(normal * 2.0 - 1.0);
 
-				float ambientStrength = 0.3;
-			  vec3 lightColor = vec3(1.0, 1.0, 1.0);
-			  vec3 ambient = ambientStrength * lightColor;
+				vec3 texelColor = texture2D(uSampler, vTextureCoord).rgb;
+				// ambient
+				vec3 ambient = texelColor * 0.1;
 
-				vec4 litR = lit(
-					dot(normal, v_ray),
-					dot(normal, halfVector),
-					1
-				);
+				//diffuse
+				vec3 lightDir = normalize(vTangentLightPos - vTangentFragPos);
+				float diff = max(dot(normal, lightDir), 0.0);
+				vec3 diffuse = diff * texelColor;
 
-				vec4 outColor = vec4((lightColor * (diffuseColor * litR.y + diffuseColor * 0.3)).rgb, diffuseColor.a);
-				gl_FragColor = outColor;
+				//specular
+				vec3 viewDir  = normalize(vTangentViewPos - vTangentFragPos);
+				vec3 reflectDir = reflect(-lightDir, normal);
+				vec3 halfwayDir = normalize(lightDir + viewDir);
+				float spec = pow(max(dot(normal, halfwayDir), 0.0), 32.0);
+				vec3 specular = vec3(0.2) * spec;
+
+				gl_FragColor = vec4(ambient + diffuse + specular, 1.0);
 			}
 		</script>
 	</head>

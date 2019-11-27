@@ -1,13 +1,16 @@
-import angle from "../math/angle";
-import Walker from "./walker";
+import angle from '../math/angle';
+import Walker from './walker';
 
 export default class Controller {
 	private walker: Walker;
 	private canvas: HTMLCanvasElement;
+	private readyForSocket: boolean;
 
 	constructor(canvas: HTMLCanvasElement, walker: Walker) {
 		this.canvas = canvas;
 		this.walker = walker;
+
+		this.readyForSocket = false;
 
 		this.initListeners();
 		this.initSocket();
@@ -15,18 +18,18 @@ export default class Controller {
 
 	private initListeners() {
 		/* keyboard */
-		this.canvas.addEventListener("keydown", (event: KeyboardEvent) => {
+		this.canvas.addEventListener('keydown', (event: KeyboardEvent) => {
 			switch (event.code) {
-				case "KeyW":
+				case 'KeyW':
 					this.walker.move(1);
 					break;
-				case "KeyS":
+				case 'KeyS':
 					this.walker.move(-1);
 					break;
-				case "KeyA":
+				case 'KeyA':
 					this.walker.strafe(1);
 					break;
-				case "KeyD":
+				case 'KeyD':
 					this.walker.strafe(-1);
 					break;
 			}
@@ -34,18 +37,17 @@ export default class Controller {
 
 		/* mouse */
 		let oldX: number, oldY: number, isDown: boolean, isCatched: Boolean;
-		this.canvas.addEventListener("mousedown", (event: MouseEvent) => {
+		this.canvas.addEventListener('mousedown', (event: MouseEvent) => {
 			oldX = event.offsetX;
 			oldY = event.offsetY;
 			isDown = true;
 
 			isCatched = this.walker.tryCatch(event.clientX, event.clientY);
-			console.info(`Is object catched? ${isCatched}`);
 			//change cursor to understand that we catched something
-			document.body.style.cursor = isCatched ? "move" : "default";
+			document.body.style.cursor = isCatched ? 'move' : 'default';
 		});
 
-		this.canvas.addEventListener("mousemove", (event: MouseEvent) => {
+		this.canvas.addEventListener('mousemove', (event: MouseEvent) => {
 			if (isDown) {
 				this.walker.yaw(angle.degToRad((oldX - event.offsetX) * 2));
 				this.walker.pitch(angle.degToRad((oldY - event.offsetY) * 2));
@@ -60,31 +62,34 @@ export default class Controller {
 			oldY = event.offsetY;
 		});
 
-		this.canvas.addEventListener("mouseup", () => {
+		this.canvas.addEventListener('mouseup', () => {
 			isDown = false;
 		});
 
 		/* resize */
-		window.addEventListener("resize", (event: UIEvent) => {
-			this.canvas.width = document.getElementById("body").clientWidth;
-			this.canvas.height = document.getElementById("body").clientHeight;
+		window.addEventListener('resize', (event: UIEvent) => {
+			this.canvas.width = document.getElementById('body').clientWidth;
+			this.canvas.height = document.getElementById('body').clientHeight;
 		});
 	}
 
 	private initSocket() {
-		const socket = new WebSocket("ws://127.0.0.1:8080");
-		socket.onopen = () => console.log("socket connection is open");
-		socket.onmessage = data => {
-			const quaternion = JSON.parse(data.data);
-			this.walker.rotateWonderfulObject(quaternion);
-		};
-		socket.onerror = error => console.error(error);
-		socket.onclose = data => {
-			if (data.wasClean) {
-				console.info("socket connection closed clearly");
-			} else {
-				console.info("disconnect");
-			}
-		};
+		if (this.readyForSocket) {
+			//192.168.4.1:81
+			const socket = new WebSocket('ws://192.168.4.1:81');
+			socket.onopen = () => console.log('socket connection is open');
+			socket.onmessage = data => {
+				const quaternion = JSON.parse(data.data);
+				this.walker.rotateWonderfulObject(quaternion);
+			};
+			socket.onerror = error => console.error(error);
+			socket.onclose = data => {
+				if (data.wasClean) {
+					console.info('socket connection closed clearly');
+				} else {
+					console.info('disconnect');
+				}
+			};
+		}
 	}
 }

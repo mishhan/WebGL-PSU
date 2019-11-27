@@ -1,10 +1,9 @@
 import Camera from '../graphic/camera';
 import matrix4 from '../math/matrix4';
 import Vector from '../math/vector';
+import Cube from './cube/cube';
 
-const OBJ = require('webgl-obj-loader');
-
-export default class ReliefSceneObject {
+export default class SimpleSceneObject {
 	private vertex: number[];
 	private index: number[];
 	private normal: number[];
@@ -41,7 +40,6 @@ export default class ReliefSceneObject {
 	private uProjectionMatrixLocation: WebGLUniformLocation;
 	private uNormalMatrixLocation: WebGLUniformLocation;
 
-	private lightPosLocation: WebGLUniformLocation;
 	private viewPosLocation: WebGLUniformLocation;
 
 	private gl: WebGLRenderingContext;
@@ -54,16 +52,17 @@ export default class ReliefSceneObject {
 		program: WebGLProgram,
 		camera: Camera,
 		projMatrix: number[],
-		obj: string,
+		cube: Cube,
 		imageUrl: string,
 		reliefImageUrl: string
 	) {
-		/* read data from obj */
-		const mesh = new OBJ.Mesh(obj);
-		this.vertex = mesh.vertices;
-		this.normal = mesh.vertexNormals;
-		this.index = mesh.indices;
-		this.uv = mesh.textures;
+		const data = cube.getData();
+		this.vertex = data.vertex;
+		this.index = data.index;
+		this.normal = data.normal;
+		this.uv = data.uv;
+		this.tangent = data.tangent;
+		this.bitangent = data.bitangent;
 
 		/* store variables */
 		this.gl = gl;
@@ -82,7 +81,7 @@ export default class ReliefSceneObject {
 		this.uModelMatrixLocation = gl.getUniformLocation(program, 'uModelMatrix');
 		this.uProjectionMatrixLocation = gl.getUniformLocation(program, 'uProjectionMatrix');
 		this.uNormalMatrixLocation = gl.getUniformLocation(program, 'uNormalMatrix');
-
+		this.viewPosLocation = gl.getUniformLocation(program, 'viewPos');
 		this.textureLocation = gl.getUniformLocation(program, 'uSampler');
 		this.reliefTextureLocation = gl.getUniformLocation(program, 'uNormals');
 
@@ -102,8 +101,6 @@ export default class ReliefSceneObject {
 		gl.bindBuffer(gl.ARRAY_BUFFER, this.uvBuffer);
 		gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.uv), gl.STATIC_DRAW);
 
-		this.calculateTangent();
-
 		this.tangentBuffer = gl.createBuffer();
 		gl.bindBuffer(gl.ARRAY_BUFFER, this.tangentBuffer);
 		gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.tangent), gl.STATIC_DRAW);
@@ -117,13 +114,12 @@ export default class ReliefSceneObject {
 		image.addEventListener('load', () => {
 			this.texture = gl.createTexture();
 			gl.bindTexture(gl.TEXTURE_2D, this.texture);
-
+			gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
 			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.MIRRORED_REPEAT);
 			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.MIRRORED_REPEAT);
 
 			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
 			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-			gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
 		});
 
 		const reliefImage = new Image();
@@ -131,13 +127,12 @@ export default class ReliefSceneObject {
 		reliefImage.addEventListener('load', () => {
 			this.reliefTexture = gl.createTexture();
 			gl.bindTexture(gl.TEXTURE_2D, this.reliefTexture);
-
+			gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, reliefImage);
 			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.MIRRORED_REPEAT);
 			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.MIRRORED_REPEAT);
 
 			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
 			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-			gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, reliefImage);
 		});
 	}
 
@@ -187,7 +182,7 @@ export default class ReliefSceneObject {
 		);
 		M = matrix4.scale(M, this.matrixes.scale[0], this.matrixes.scale[1], this.matrixes.scale[2]);
 
-		let N = matrix4.transpose(matrix4.inverse(M));
+		let N = matrix4.transpose(matrix4.inverse(matrix4.multiply(M, V)));
 
 		gl.uniformMatrix4fv(this.uModelMatrixLocation, false, M);
 		gl.uniformMatrix4fv(this.uViewMatrixLocation, false, V);
@@ -204,107 +199,5 @@ export default class ReliefSceneObject {
 
 		gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
 		gl.drawElements(gl.TRIANGLES, this.index.length, gl.UNSIGNED_SHORT, 0);
-	}
-
-	private calculateTangent(): void {
-		this.tangent = [];
-		this.bitangent = [];
-		for (let i = 0; i < this.index.length; i += 3) {
-			const { tangent, bitangent } = this.calcTangentBitangent(
-				this.iX(i, 0),
-				this.iY(i, 0),
-				this.iZ(i, 0),
-				this.iX(i, 1),
-				this.iY(i, 1),
-				this.iZ(i, 1),
-				this.iX(i, 2),
-				this.iY(i, 2),
-				this.iZ(i, 2),
-				this.iU(i, 0),
-				this.iV(i, 0),
-				this.iU(i, 1),
-				this.iV(i, 1),
-				this.iU(i, 2),
-				this.iV(i, 2)
-			);
-			this.tangent.push(tangent[0]);
-			this.tangent.push(tangent[1]);
-			this.tangent.push(tangent[2]);
-
-			this.bitangent.push(bitangent[0]);
-			this.bitangent.push(bitangent[1]);
-			this.bitangent.push(bitangent[2]);
-		}
-	}
-
-	private iX(index: number, nmb: number): number {
-		return this.vertex[this.index[index + nmb] * 3 + 0];
-	}
-
-	private iY(index: number, nmb: number): number {
-		return this.vertex[this.index[index + nmb] * 3 + 1];
-	}
-
-	private iZ(index: number, nmb: number): number {
-		return this.vertex[this.index[index + nmb] * 3 + 2];
-	}
-
-	private iU(index: number, nmb: number): number {
-		return this.uv[this.index[index + nmb] * 2 + 0];
-	}
-
-	private iV(index: number, nmb: number): number {
-		return this.uv[this.index[index + nmb] * 2 + 1];
-	}
-
-	private calcTangentBitangent(
-		x1: number,
-		y1: number,
-		z1: number,
-		x2: number,
-		y2: number,
-		z2: number,
-		x3: number,
-		y3: number,
-		z3: number,
-		u1: number,
-		v1: number,
-		u2: number,
-		v2: number,
-		u3: number,
-		v3: number
-	): { tangent: number[]; bitangent: number[] } {
-		const pos1 = [x1, y1, z1];
-		const pos2 = [x2, y2, z2];
-		const pos3 = [x3, y3, z3];
-
-		const uv1 = [u1, v1];
-		const uv2 = [u2, v2];
-		const uv3 = [u3, v3];
-
-		const edge1 = Vector.subtract(pos2, pos1);
-		const edge2 = Vector.subtract(pos3, pos1);
-		const deltaUV1 = Vector.subtract2(uv2, uv1);
-		const deltaUV2 = Vector.subtract2(uv3, uv1);
-
-		const f = 1.0 / (deltaUV1[0] * deltaUV2[1] - deltaUV2[0] * deltaUV1[1]);
-
-		let tangent = [
-			f * (deltaUV2[1] * edge1[0] - deltaUV1[1] * edge2[0]),
-			f * (deltaUV2[1] * edge1[1] - deltaUV1[1] * edge2[1]),
-			f * (deltaUV2[1] * edge1[2] - deltaUV1[1] * edge2[2])
-		];
-		tangent = Vector.normalize(tangent);
-
-		let bitangent = [
-			f * (-deltaUV2[0] * edge1[0] + deltaUV1[0] * edge2[0]),
-			f * (-deltaUV2[0] * edge1[1] + deltaUV1[0] * edge2[1]),
-			f * (-deltaUV2[0] * edge1[2] + deltaUV1[0] * edge2[2])
-		];
-		bitangent = Vector.normalize(bitangent);
-		return {
-			tangent: tangent,
-			bitangent: bitangent
-		};
 	}
 }

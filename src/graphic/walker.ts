@@ -40,7 +40,9 @@ export default class Walker {
 
 	public rotateWonderfulObject(quaternion: any): void {
 		this.scene.WonderfulObject.IsCatched = true;
-		this.scene.WonderfulObject.RotationMatrix = Matrix4.fromQuat(quaternion);
+		//quaternion.normalize()..
+		const vrQuaternion = [quaternion[1], -quaternion[2], quaternion[0], quaternion[3]];
+		this.scene.WonderfulObject.RotationMatrix = Matrix4.fromQuat(vrQuaternion);
 	}
 
 	public tryCatch(xCoordinate: number, yCoordinate: number): boolean {

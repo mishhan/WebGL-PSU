@@ -1,7 +1,7 @@
-import Camera from "../graphic/camera";
-import matrix4 from "../math/matrix4";
+import Camera from '../graphic/camera';
+import matrix4 from '../math/matrix4';
 
-const OBJ = require("webgl-obj-loader");
+const OBJ = require('webgl-obj-loader');
 
 export default class SceneObject {
 	private vertex: number[];
@@ -64,13 +64,13 @@ export default class SceneObject {
 		this.isCatched = false;
 
 		/* init webgl data */
-		this.positionLocation = gl.getAttribLocation(program, "a_position");
-		this.uvLocation = gl.getAttribLocation(program, "a_uv");
-		this.mpLocation = gl.getUniformLocation(program, "u_MP");
-		this.textureLocation = gl.getUniformLocation(program, "u_texture");
+		this.positionLocation = gl.getAttribLocation(program, 'a_position');
+		this.uvLocation = gl.getAttribLocation(program, 'a_uv');
+		this.mpLocation = gl.getUniformLocation(program, 'u_MP');
+		this.textureLocation = gl.getUniformLocation(program, 'u_texture');
 
-		this.isFakeLocation = gl.getUniformLocation(program, "is_fake");
-		this.fakeColorLocation = gl.getUniformLocation(program, "fake_color");
+		this.isFakeLocation = gl.getUniformLocation(program, 'is_fake');
+		this.fakeColorLocation = gl.getUniformLocation(program, 'fake_color');
 
 		this.indexBuffer = gl.createBuffer();
 		gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
@@ -86,7 +86,7 @@ export default class SceneObject {
 
 		const image = new Image();
 		image.src = imageUrl;
-		image.addEventListener("load", () => {
+		image.addEventListener('load', () => {
 			this.texture = gl.createTexture();
 			gl.bindTexture(gl.TEXTURE_2D, this.texture);
 
