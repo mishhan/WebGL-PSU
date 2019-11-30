@@ -1,22 +1,14 @@
-/* eslint-disable no-use-before-define */
-/* eslint-disable no-console */
-/* eslint-disable no-constant-condition */
-const http = require("http");
-const ws = require("ws");
+const express = require('express');
+const path = require('path');
 
-const wss = new ws.Server({ noServer: true });
+const port = process.env.PORT || 8080;
+const app = express();
+const appFolder = `${__dirname}/dist`;
 
-function accept(req) {
-	wss.handleUpgrade(req, req.socket, Buffer.alloc(0), onConnect);
-}
+app.use(express.static(appFolder));
 
-function onConnect(ws) {
-	setInterval(() => {
-		const quaternion = [Math.random(), Math.random(), Math.random(), Math.random()];
-		const strQuaternion = JSON.stringify(quaternion);
-		console.log(`sendind ${strQuaternion} to client`);
-		ws.send(strQuaternion);
-	}, 200);
-}
+app.get('*', (req, res) => {
+	res.sendFile(path.resolve(appFolder, 'index.html'));
+});
 
-http.createServer(accept).listen(8080);
+app.listen(port);
