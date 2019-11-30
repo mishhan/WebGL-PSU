@@ -1,4 +1,4 @@
-import vector from "../../math/vector";
+import { vec3 } from 'gl-matrix';
 
 export default class Landscape {
 	private middleCoordinate: number;
@@ -22,8 +22,8 @@ export default class Landscape {
 		this.yCoordinateMultiplayer = 0.2;
 		this.textureRepeatCount = 32;
 
-		this.textureImageElement = "landscape";
-		this.canvasHandlerElement = "canvas-handler";
+		this.textureImageElement = 'landscape';
+		this.canvasHandlerElement = 'canvas-handler';
 
 		this.vertex = [];
 		this.index = [];
@@ -119,7 +119,7 @@ export default class Landscape {
 
 	private createHeightMap() {
 		const canvas = <HTMLCanvasElement>document.getElementById(this.canvasHandlerElement);
-		const context = canvas.getContext("2d");
+		const context = canvas.getContext('2d');
 		const img = <HTMLImageElement>document.getElementById(this.textureImageElement);
 		canvas.width = img.width;
 		canvas.height = img.height;
@@ -144,15 +144,10 @@ export default class Landscape {
 			indexVertice2,
 			indexVertice3,
 			indexVertice1Vertice,
-			vertice1Coordinates,
 			indexVertice2Vertice,
-			vertice2Coordinates,
 			indexVertice3Vertice,
-			vertice3Coordinates,
 			vec1,
-			vec2,
-			c,
-			normalizedC;
+			vec2;
 
 		const vertexAttributeCount = this.vertexAttributeCount;
 
@@ -162,32 +157,36 @@ export default class Landscape {
 			indexVertice3 = this.index[i * 3 + 2];
 
 			indexVertice1Vertice = indexVertice1 * vertexAttributeCount;
-			vertice1Coordinates = [
+			indexVertice2Vertice = indexVertice2 * vertexAttributeCount;
+			indexVertice3Vertice = indexVertice3 * vertexAttributeCount;
+
+			const vertice1 = vec3.fromValues(
 				this.vertex[indexVertice1Vertice],
 				this.vertex[indexVertice1Vertice + 1],
 				this.vertex[indexVertice1Vertice + 2]
-			];
-
-			indexVertice2Vertice = indexVertice2 * vertexAttributeCount;
-			vertice2Coordinates = [
+			);
+			const vertice2 = vec3.fromValues(
 				this.vertex[indexVertice2Vertice],
 				this.vertex[indexVertice2Vertice + 1],
 				this.vertex[indexVertice2Vertice + 2]
-			];
-
-			indexVertice3Vertice = indexVertice3 * vertexAttributeCount;
-			vertice3Coordinates = [
+			);
+			const vertice3 = vec3.fromValues(
 				this.vertex[indexVertice3Vertice],
 				this.vertex[indexVertice3Vertice + 1],
 				this.vertex[indexVertice3Vertice + 2]
-			];
+			);
 
-			vec1 = vector.subtract(vertice2Coordinates, vertice1Coordinates);
-			vec2 = vector.subtract(vertice3Coordinates, vertice2Coordinates);
+			vec1 = vec3.create();
+			vec3.subtract(vec1, vertice2, vertice1);
 
-			c = vector.cross(vec1, vec2);
+			vec2 = vec3.create();
+			vec3.subtract(vec2, vertice3, vertice2);
 
-			normalizedC = vector.normalize(c);
+			const c = vec3.create();
+			vec3.cross(c, vec1, vec2);
+
+			const normalizedC = vec3.create();
+			vec3.normalize(normalizedC, c);
 
 			this.vertex[indexVertice1 * vertexAttributeCount + 3] += normalizedC[0];
 			this.vertex[indexVertice1 * vertexAttributeCount + 4] += normalizedC[1];

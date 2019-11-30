@@ -1,10 +1,13 @@
-import Landscape from "./environment/landscape";
-import Camera from "../graphic/camera";
-import matrix4 from "../math/matrix4";
+import GLObject from '../base/gl-object';
+import Camera from '../graphic/camera';
+import Landscape from '../models/environment/landscape';
+import FragmentShader from '../models/shaders/landscape/fragment-shader';
+import VertexShader from '../models/shaders/landscape/vertex-shader';
+import { mat4, vec3 } from 'gl-matrix';
 // @ts-ignore
-import landscapeImage from "../assets/images/landscape/landscape.jpg";
+import landscapeImage from '../assets/images/landscape/landscape.jpg';
 
-export default class LandscapeSceneObject {
+export default class LandscapeSceneObject extends GLObject {
 	private vertex: number[];
 	private index: number[];
 	private matrixes: {
@@ -22,26 +25,19 @@ export default class LandscapeSceneObject {
 	private normalLocation: number;
 	private uvLocation: number;
 
-	private mpLocation: WebGLUniformLocation;
-	private mvpLocation: WebGLUniformLocation;
+	private uViewMatrixLocation: WebGLUniformLocation;
+	private uModelMatrixLocation: WebGLUniformLocation;
+	private uProjectionMatrixLocation: WebGLUniformLocation;
 
 	private lightPos: number[];
 	private lightPosLocation: WebGLUniformLocation;
 
-	private gl: WebGLRenderingContext;
-	private program: WebGLProgram;
 	private camera: Camera;
-	private projMatrix: number[];
+	private projMatrix: mat4;
 
-	constructor(
-		gl: WebGLRenderingContext,
-		program: WebGLProgram,
-		camera: Camera,
-		projMatrix: number[],
-		landscape: Landscape
-	) {
-		this.gl = gl;
-		this.program = program;
+	constructor(gl: WebGLRenderingContext, camera: Camera, projMatrix: mat4, landscape: Landscape) {
+		super(gl);
+
 		this.camera = camera;
 		this.projMatrix = projMatrix;
 
@@ -54,13 +50,16 @@ export default class LandscapeSceneObject {
 
 	private init() {
 		const gl = this.gl;
-		this.positionLocation = gl.getAttribLocation(this.program, "a_position");
-		this.normalLocation = gl.getAttribLocation(this.program, "a_normal");
-		this.uvLocation = gl.getAttribLocation(this.program, "a_uv");
-		this.mpLocation = gl.getUniformLocation(this.program, "u_MV");
-		this.mvpLocation = gl.getUniformLocation(this.program, "u_MVP");
-		this.lightPosLocation = gl.getUniformLocation(this.program, "u_lightPos");
-		this.textureLocation = gl.getUniformLocation(this.program, "u_landscape");
+		this.positionLocation = gl.getAttribLocation(this.program, 'aVertexPosition');
+		this.normalLocation = gl.getAttribLocation(this.program, 'aVertexNormal');
+		this.uvLocation = gl.getAttribLocation(this.program, 'aTextureCoord');
+
+		this.uViewMatrixLocation = gl.getUniformLocation(this.program, 'uViewMatrix');
+		this.uModelMatrixLocation = gl.getUniformLocation(this.program, 'uModelMatrix');
+		this.uProjectionMatrixLocation = gl.getUniformLocation(this.program, 'uProjectionMatrix');
+
+		this.lightPosLocation = gl.getUniformLocation(this.program, 'uLightPos');
+		this.textureLocation = gl.getUniformLocation(this.program, 'uSampler');
 
 		this.indexBuffer = gl.createBuffer();
 		gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
@@ -72,7 +71,7 @@ export default class LandscapeSceneObject {
 
 		const image = new Image();
 		image.src = landscapeImage;
-		image.addEventListener("load", () => {
+		image.addEventListener('load', () => {
 			this.texture = gl.createTexture();
 			gl.bindTexture(gl.TEXTURE_2D, this.texture);
 			gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
@@ -100,34 +99,47 @@ export default class LandscapeSceneObject {
 		const P = this.projMatrix;
 		const V = this.camera.getViewMatrix();
 
-		let M = matrix4.identity();
-		M = matrix4.translate(
+		let M = mat4.create();
+		let N = mat4.create();
+		mat4.identity(M);
+		mat4.translate(
 			M,
-			this.matrixes.translation[0],
-			this.matrixes.translation[1],
-			this.matrixes.translation[2]
-		);
-		M = matrix4.rotate(
 			M,
-			this.matrixes.rotation[0],
-			this.matrixes.rotation[1],
-			this.matrixes.rotation[2]
+			vec3.fromValues(
+				this.matrixes.translation[0],
+				this.matrixes.translation[1],
+				this.matrixes.translation[2]
+			)
 		);
-		M = matrix4.scale(M, this.matrixes.scale[0], this.matrixes.scale[1], this.matrixes.scale[2]);
 
-		let MP = matrix4.multiply(P, M);
-		let MVP = matrix4.multiply(P, V);
-		MVP = matrix4.multiply(MVP, M);
+		mat4.rotateX(M, M, this.matrixes.rotation[0]);
+		mat4.rotateX(M, M, this.matrixes.rotation[1]);
+		mat4.rotateX(M, M, this.matrixes.rotation[2]);
+
+		mat4.scale(
+			M,
+			M,
+			vec3.fromValues(this.matrixes.scale[0], this.matrixes.scale[1], this.matrixes.scale[2])
+		);
 
 		gl.uniform3fv(this.lightPosLocation, this.lightPos);
-		gl.uniformMatrix4fv(this.mpLocation, false, MP);
-		gl.uniformMatrix4fv(this.mvpLocation, false, MVP);
+		gl.uniformMatrix4fv(this.uModelMatrixLocation, false, M);
+		gl.uniformMatrix4fv(this.uViewMatrixLocation, false, V);
+		gl.uniformMatrix4fv(this.uProjectionMatrixLocation, false, P);
 
 		gl.activeTexture(gl.TEXTURE0);
 		gl.bindTexture(gl.TEXTURE_2D, this.texture);
 		gl.uniform1i(this.textureLocation, 0);
 
 		gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
-		gl.drawElements(gl.TRIANGLES, this.index.length, gl.UNSIGNED_SHORT, 0);
+		gl.drawElements(this.getPrimitiveType(), this.index.length, gl.UNSIGNED_SHORT, 0);
+	}
+
+	getVS(): string {
+		return VertexShader;
+	}
+
+	getFS(): string {
+		return FragmentShader;
 	}
 }

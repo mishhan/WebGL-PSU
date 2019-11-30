@@ -1,18 +1,18 @@
-import webglUtils from '../utils/webglUtils';
-import SceneObject from '../models/scene-object';
-import SimpleSceneObject from '../models/simple-scene-object';
+import GlElement from '../base/gl-element';
+import SceneObject from '../scene/scene-object';
+import ReliefCubeSceneObject from '../scene/relief-cube-scene-object';
 import Camera from '../graphic/camera';
 import Cube from '../models/cube/cube';
+import { mat4 } from 'gl-matrix';
+import houseObj from '../models/house/house-obj';
+import cactusObj from '../models/cactus/cactus-obj';
+import corsucantObj from '../models/corsucant/corsucant-obj';
+import characterObj from '../models/character/character-obj';
 
 // @ts-ignore
 import cubeImage from '../models/cube/cube.jpg';
 // @ts-ignore
 import cubeReliefImage from '../models/cube/cube_normal.jpg';
-
-import houseObj from '../models/house/house-obj';
-import cactusObj from '../models/cactus/cactus-obj';
-import corsucantObj from '../models/corsucant/corsucant-obj';
-import characterObj from '../models/character/character-obj';
 // @ts-ignore
 import houseImage from '../models/house/house.jpg';
 // @ts-ignore
@@ -22,76 +22,51 @@ import corsucantImage from '../models/corsucant/corsucant.jpg';
 // @ts-ignore
 import characterImage from '../models/character/character.jpg';
 
-export default class SceneInitializer {
-	private sceneObjects: (SceneObject | SimpleSceneObject)[];
+export default class SceneInitializer extends GlElement {
+	private sceneObjects: (SceneObject | ReliefCubeSceneObject)[];
 
-	private projMatrix: number[];
+	private projMatrix: mat4;
 	private camera: Camera;
-
-	private gl: WebGLRenderingContext;
-	private programObject: WebGLProgram;
-	private programReliefObject: WebGLProgram;
 
 	public get SceneObjects(): any[] {
 		return this.sceneObjects;
 	}
 
-	constructor(gl: WebGLRenderingContext, camera: Camera, projMatrix: number[]) {
-		this.gl = gl;
+	constructor(gl: WebGLRenderingContext, camera: Camera, projMatrix: mat4) {
+		super(gl);
+
 		this.camera = camera;
 		this.projMatrix = projMatrix;
-
-		this.programObject = webglUtils.createProgramFromScripts(gl, [
-			'object-vertex-shader',
-			'object-fragment-shader'
-		]);
-
-		this.programReliefObject = webglUtils.createProgramFromScripts(gl, [
-			'relief-object-vertex-shader',
-			'relief-object-fragment-shader'
-		]);
-
 		this.sceneObjects = [];
-
 		this.initSceneObjects();
 	}
 
 	private initSceneObjects() {
-		const reliefHouse = new SceneObject(
-			this.gl,
-			this.programObject,
-			this.camera,
-			this.projMatrix,
-			houseObj,
-			houseImage
-		);
-		reliefHouse.Matrixes = {
+		const firstHouse = new SceneObject(this.gl, this.camera, this.projMatrix, houseObj, houseImage);
+		firstHouse.Matrixes = {
 			translation: [0.5, 0.25, 0.5],
 			rotation: [0, 0, 0],
 			scale: [1 / 100, 1 / 100, 1 / 100]
 		};
-		this.sceneObjects.push(reliefHouse);
+		this.sceneObjects.push(firstHouse);
 
-		const house = new SceneObject(
+		const secondHouse = new SceneObject(
 			this.gl,
-			this.programObject,
 			this.camera,
 			this.projMatrix,
 			houseObj,
 			houseImage
 		);
-
-		house.Matrixes = {
+		secondHouse.Matrixes = {
 			translation: [0.5, 0.25, 0.25],
 			rotation: [0, 0, 0],
 			scale: [1 / 100, 1 / 100, 1 / 100]
 		};
-		this.sceneObjects.push(house);
+		this.sceneObjects.push(secondHouse);
 
 		for (let i = 0; i < 5; i++) {
 			const cactus = new SceneObject(
 				this.gl,
-				this.programObject,
 				this.camera,
 				this.projMatrix,
 				cactusObj,
@@ -103,14 +78,12 @@ export default class SceneInitializer {
 				rotation: [0, 0, 0],
 				scale: [1 / 300, 1 / 300, 1 / 300].map(item => item * (i + 1))
 			};
-
 			this.sceneObjects.push(cactus);
 		}
 
 		for (let i = 0; i < 3; i++) {
 			const corsucant = new SceneObject(
 				this.gl,
-				this.programObject,
 				this.camera,
 				this.projMatrix,
 				corsucantObj,
@@ -127,7 +100,6 @@ export default class SceneInitializer {
 
 		const character = new SceneObject(
 			this.gl,
-			this.programObject,
 			this.camera,
 			this.projMatrix,
 			characterObj,
@@ -141,14 +113,14 @@ export default class SceneInitializer {
 		this.sceneObjects.push(character);
 
 		const cube = new Cube();
-		const cubeObject = new SimpleSceneObject(
+		const cubeObject = new ReliefCubeSceneObject(
 			this.gl,
-			this.programReliefObject,
 			this.camera,
 			this.projMatrix,
 			cube,
 			cubeImage,
-			cubeReliefImage
+			cubeReliefImage,
+			true
 		);
 		cubeObject.Matrixes = {
 			translation: [0.2, 0.2, 0.2],

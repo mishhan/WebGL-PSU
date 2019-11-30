@@ -1,5 +1,5 @@
-import angle from '../math/angle';
 import Walker from './walker';
+import { degToRad } from '../utils/utils';
 
 export default class Controller {
 	private walker: Walker;
@@ -49,13 +49,13 @@ export default class Controller {
 
 		this.canvas.addEventListener('mousemove', (event: MouseEvent) => {
 			if (isDown) {
-				this.walker.yaw(angle.degToRad((oldX - event.offsetX) * 2));
-				this.walker.pitch(angle.degToRad((oldY - event.offsetY) * 2));
+				this.walker.yaw(degToRad((oldX - event.offsetX) * 2));
+				this.walker.pitch(degToRad((oldY - event.offsetY) * 2));
 			}
 			if (isCatched) {
 				this.walker.rotateCatchedObject(
-					angle.degToRad((oldX - event.offsetX) * 2),
-					angle.degToRad((oldY - event.offsetY) * 2)
+					degToRad((oldX - event.offsetX) * 2),
+					degToRad((oldY - event.offsetY) * 2)
 				);
 			}
 			oldX = event.offsetX;

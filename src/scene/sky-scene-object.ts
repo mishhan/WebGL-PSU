@@ -1,10 +1,13 @@
-import Camera from "../graphic/camera";
-import Sky from "./environment/sky";
-import matrix4 from "../math/matrix4";
+import GLObject from '../base/gl-object';
+import Camera from '../graphic/camera';
+import Sky from '../models/environment/sky';
+import FragmentShader from '../models/shaders/sky/fragment-shader';
+import VertexShader from '../models/shaders/sky/vertex-shader';
+import { mat4 } from 'gl-matrix';
 // @ts-ignore
-import skyboxImage from "../assets/images/sky/skybox.jpg";
+import skyboxImage from '../assets/images/sky/skybox.jpg';
 
-export default class SkySceneObject {
+export default class SkySceneObject extends GLObject {
 	private vertex: number[];
 	private index: number[];
 
@@ -15,22 +18,15 @@ export default class SkySceneObject {
 	private textureLocation: WebGLUniformLocation;
 
 	private positionLocation: number;
-	private mvpLocation: WebGLUniformLocation;
+	private uViewMatrixLocation: WebGLUniformLocation;
+	private uModelMatrixLocation: WebGLUniformLocation;
+	private uProjectionMatrixLocation: WebGLUniformLocation;
 
-	private gl: WebGLRenderingContext;
-	private program: WebGLProgram;
 	private camera: Camera;
-	private projMatrix: number[];
+	private projMatrix: mat4;
 
-	constructor(
-		gl: WebGLRenderingContext,
-		program: WebGLProgram,
-		camera: Camera,
-		projMatrix: number[],
-		sky: Sky
-	) {
-		this.gl = gl;
-		this.program = program;
+	constructor(gl: WebGLRenderingContext, camera: Camera, projMatrix: mat4, sky: Sky) {
+		super(gl);
 		this.camera = camera;
 		this.projMatrix = projMatrix;
 
@@ -42,9 +38,12 @@ export default class SkySceneObject {
 	private init() {
 		const gl = this.gl;
 
-		this.positionLocation = gl.getAttribLocation(this.program, "a_position");
-		this.mvpLocation = gl.getUniformLocation(this.program, "u_MVP");
-		this.textureLocation = gl.getUniformLocation(this.program, "u_skybox");
+		this.positionLocation = gl.getAttribLocation(this.program, 'aVertexPosition');
+
+		this.uViewMatrixLocation = gl.getUniformLocation(this.program, 'uViewMatrix');
+		this.uModelMatrixLocation = gl.getUniformLocation(this.program, 'uModelMatrix');
+		this.uProjectionMatrixLocation = gl.getUniformLocation(this.program, 'uProjectionMatrix');
+		this.textureLocation = gl.getUniformLocation(this.program, 'uSampler');
 
 		this.indexBuffer = gl.createBuffer();
 		gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
@@ -54,12 +53,12 @@ export default class SkySceneObject {
 		gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
 		gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.vertex), gl.STATIC_DRAW);
 
-		const canvas = <HTMLCanvasElement>document.getElementById("canvas-handler");
-		const context = canvas.getContext("2d");
+		const canvas = <HTMLCanvasElement>document.getElementById('canvas-handler');
+		const context = canvas.getContext('2d');
 
 		const image = new Image();
 		image.src = skyboxImage;
-		image.addEventListener("load", () => {
+		image.addEventListener('load', () => {
 			const sideLength = image.width / 4;
 			canvas.width = image.width;
 			canvas.height = image.height;
@@ -117,19 +116,29 @@ export default class SkySceneObject {
 
 		const P = this.projMatrix;
 		const V = this.camera.getViewMatrix();
-		//important
+
+		/* IMPORTANT */
 		V[12] = 0;
 		V[13] = 0;
 		V[14] = 0;
 
-		let M = matrix4.identity();
-		let MVP = matrix4.multiply(P, V);
-		MVP = matrix4.multiply(MVP, M);
+		let M = mat4.create();
 
-		gl.uniformMatrix4fv(this.mvpLocation, false, MVP);
+		gl.uniformMatrix4fv(this.uModelMatrixLocation, false, M);
+		gl.uniformMatrix4fv(this.uViewMatrixLocation, false, V);
+		gl.uniformMatrix4fv(this.uProjectionMatrixLocation, false, P);
+
 		gl.uniform1i(this.textureLocation, 0);
 
 		gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
 		gl.drawElements(gl.TRIANGLES, this.index.length, gl.UNSIGNED_SHORT, 0);
+	}
+
+	getVS(): string {
+		return VertexShader;
+	}
+
+	getFS(): string {
+		return FragmentShader;
 	}
 }
