@@ -1,37 +1,36 @@
-const path = require("path");
-const CopyWebpackPlugin = require("copy-webpack-plugin");
+const path = require('path');
+const CopyWebpackPlugin = require('copy-webpack-plugin');
 
 module.exports = {
-	entry: "./src/index.ts",
+	entry: './src/index.ts',
 	module: {
 		rules: [
 			{
 				test: /\.tsx?$/,
-				use: "ts-loader",
+				use: 'ts-loader',
 				exclude: /node_modules/
 			},
 			{
 				test: /\.css$/i,
-				use: ["style-loader", "css-loader"]
+				use: ['style-loader', 'css-loader']
 			},
 			{
 				test: /\.(png|svg|jpg|gif)$/,
-				use: ["file-loader"]
+				use: ['file-loader']
 			}
 		]
 	},
-	plugins: [new CopyWebpackPlugin([{ from: "src/assets", to: "assets" }])],
+	plugins: [new CopyWebpackPlugin([{ from: 'src/assets', to: 'assets' }])],
 	resolve: {
-		extensions: [".tsx", ".ts", ".js", ".css"]
+		extensions: ['.tsx', '.ts', '.js', '.css']
 	},
 	devServer: {
 		inline: true,
-		contentBase: "./dist",
+		contentBase: './dist',
 		port: 5500
 	},
-	watch: true,
 	output: {
-		filename: "app.js",
-		path: path.resolve(__dirname, "dist")
+		filename: 'app.js',
+		path: path.resolve(__dirname, 'dist')
 	}
 };
