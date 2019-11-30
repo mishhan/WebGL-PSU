@@ -8,7 +8,7 @@
 		"heroku-postbuild": "webpack -p",
 		"start-app": "webpack-dev-server",
 		"build": "webpack --config webpack.config.js",
-		"launch": "node server.js",
+		"socket-server": "node server.js",
 		"lint": "eslint src/**",
 		"test": "echo \"Error: no test specified\" && exit 1"
 	},
