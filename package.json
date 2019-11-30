@@ -1,19 +1,46 @@
 {
-  "name": "virtual-reality-course",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/mishhan/virtual-reality-course.git"
-  },
-  "author": "Mikhail Smirnov (misha.smi1996@yandex.ru)",
-  "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/mishhan/virtual-reality-course/issues"
-  },
-  "homepage": "https://github.com/mishhan/virtual-reality-course#readme"
+	"name": "virtual-reality-course",
+	"version": "1.0.0",
+	"description": "",
+	"private": true,
+	"scripts": {
+		"start": "webpack-dev-server",
+		"build": "webpack --config webpack.config.js",
+		"launch": "node server.js",
+		"lint": "eslint src/**",
+		"test": "echo \"Error: no test specified\" && exit 1"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/mishhan/virtual-reality-course.git"
+	},
+	"author": "Mikhail Smirnov (misha.smi1996@yandex.ru)",
+	"license": "MIT",
+	"bugs": {
+		"url": "https://github.com/mishhan/virtual-reality-course/issues"
+	},
+	"homepage": "https://github.com/mishhan/virtual-reality-course#readme",
+	"devDependencies": {
+		"@typescript-eslint/eslint-plugin": "^2.6.0",
+		"@typescript-eslint/parser": "^2.6.0",
+		"css-loader": "^3.2.0",
+		"eslint": "^6.6.0",
+		"eslint-config-airbnb": "^18.0.1",
+		"eslint-config-prettier": "^6.5.0",
+		"eslint-plugin-import": "^2.18.2",
+		"file-loader": "^4.2.0",
+		"style-loader": "^1.0.0",
+		"ts-loader": "^6.2.1",
+		"typescript": "^3.6.4",
+		"webpack": "^4.41.2",
+		"copy-webpack-plugin": "^5.0.4",
+		"webpack-cli": "^3.3.9",
+		"webpack-dev-server": "^3.9.0"
+	},
+	"dependencies": {
+		"@types/gl-matrix": "^2.4.5",
+		"gl-matrix": "^3.1.0",
+		"webgl-obj-loader": "^2.0.6",
+		"ws": "^7.2.0"
+	}
 }
