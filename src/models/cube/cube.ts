@@ -1,4 +1,4 @@
-import Vector from '../../math/vector';
+import { vec3, vec2 } from 'gl-matrix';
 
 export default class Cube {
 	private vertex: number[];
@@ -100,32 +100,36 @@ export default class Cube {
 			indexVertice3 = this.index[i * 3 + 2];
 
 			indexVertice1Vertice = indexVertice1 * 3;
-			vertice1Coordinates = [
+			indexVertice2Vertice = indexVertice2 * 3;
+			indexVertice3Vertice = indexVertice3 * 3;
+
+			const vertice1 = vec3.fromValues(
 				this.vertex[indexVertice1Vertice],
 				this.vertex[indexVertice1Vertice + 1],
 				this.vertex[indexVertice1Vertice + 2]
-			];
-
-			indexVertice2Vertice = indexVertice2 * 3;
-			vertice2Coordinates = [
+			);
+			const vertice2 = vec3.fromValues(
 				this.vertex[indexVertice2Vertice],
 				this.vertex[indexVertice2Vertice + 1],
 				this.vertex[indexVertice2Vertice + 2]
-			];
-
-			indexVertice3Vertice = indexVertice3 * 3;
-			vertice3Coordinates = [
+			);
+			const vertice3 = vec3.fromValues(
 				this.vertex[indexVertice3Vertice],
 				this.vertex[indexVertice3Vertice + 1],
 				this.vertex[indexVertice3Vertice + 2]
-			];
+			);
 
-			vec1 = Vector.subtract(vertice2Coordinates, vertice1Coordinates);
-			vec2 = Vector.subtract(vertice3Coordinates, vertice2Coordinates);
+			vec1 = vec3.create();
+			vec3.subtract(vec1, vertice2, vertice1);
 
-			c = Vector.cross(vec1, vec2);
+			vec2 = vec3.create();
+			vec3.subtract(vec2, vertice3, vertice2);
 
-			normalizedC = Vector.normalize(c);
+			const c = vec3.create();
+			vec3.cross(c, vec1, vec2);
+
+			const normalizedC = vec3.create();
+			vec3.normalize(normalizedC, c);
 
 			this.normal[indexVertice1] += normalizedC[0];
 			this.normal[indexVertice1 + 1] += normalizedC[1];
@@ -220,35 +224,43 @@ export default class Cube {
 		v2: number,
 		u3: number,
 		v3: number
-	): { tangent: number[]; bitangent: number[] } {
-		const pos1 = [x1, y1, z1];
-		const pos2 = [x2, y2, z2];
-		const pos3 = [x3, y3, z3];
+	): { tangent: vec3; bitangent: vec3 } {
+		const pos1 = vec3.fromValues(x1, y1, z1);
+		const pos2 = vec3.fromValues(x2, y2, z2);
+		const pos3 = vec3.fromValues(x3, y3, z3);
 
-		const uv1 = [u1, v1];
-		const uv2 = [u2, v2];
-		const uv3 = [u3, v3];
+		const uv1 = vec2.fromValues(u1, v1);
+		const uv2 = vec2.fromValues(u2, v2);
+		const uv3 = vec2.fromValues(u3, v3);
 
-		const edge1 = Vector.subtract(pos2, pos1);
-		const edge2 = Vector.subtract(pos3, pos1);
-		const deltaUV1 = Vector.subtract2(uv2, uv1);
-		const deltaUV2 = Vector.subtract2(uv3, uv1);
+		const edge1 = vec3.create();
+		const edge2 = vec3.create();
+
+		const deltaUV1 = vec2.create();
+		const deltaUV2 = vec2.create();
+
+		vec3.sub(edge1, pos2, pos1);
+		vec3.sub(edge2, pos3, pos1);
+		vec2.sub(deltaUV1, uv2, uv1);
+		vec2.sub(deltaUV2, uv3, uv1);
 
 		const f = 1.0 / (deltaUV1[0] * deltaUV2[1] - deltaUV2[0] * deltaUV1[1]);
 
-		let tangent = [
+		const tangent = vec3.fromValues(
 			f * (deltaUV2[1] * edge1[0] - deltaUV1[1] * edge2[0]),
 			f * (deltaUV2[1] * edge1[1] - deltaUV1[1] * edge2[1]),
 			f * (deltaUV2[1] * edge1[2] - deltaUV1[1] * edge2[2])
-		];
-		tangent = Vector.normalize(tangent);
+		);
 
-		let bitangent = [
+		vec3.normalize(tangent, tangent);
+
+		vec3.normalize(tangent, tangent);
+		const bitangent = vec3.fromValues(
 			f * (-deltaUV2[0] * edge1[0] + deltaUV1[0] * edge2[0]),
 			f * (-deltaUV2[0] * edge1[1] + deltaUV1[0] * edge2[1]),
 			f * (-deltaUV2[0] * edge1[2] + deltaUV1[0] * edge2[2])
-		];
-		bitangent = Vector.normalize(bitangent);
+		);
+		vec3.normalize(bitangent, bitangent);
 		return {
 			tangent: tangent,
 			bitangent: bitangent

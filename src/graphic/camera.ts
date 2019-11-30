@@ -1,6 +1,6 @@
-import Landscape from "../models/environment/landscape";
-import math from "../math/math-extension";
-import matrix4 from "../math/matrix4";
+import Landscape from '../models/environment/landscape';
+import { wrap } from '../utils/utils';
+import { mat4, vec3 } from 'gl-matrix';
 
 export default class Camera {
 	private landscape: Landscape;
@@ -27,7 +27,27 @@ export default class Camera {
 		this.heightUnder = 300;
 	}
 
-	public getViewMatrix(): number[] {
+	public getViewMatrix(): mat4 {
+		const translatedPos = mat4.create();
+		mat4.translate(
+			translatedPos,
+			translatedPos,
+			vec3.fromValues(
+				-this.position.x / this.landscape.getSize().x,
+				-(this.position.y + this.heightUnder) / this.landscape.getSize().y,
+				-this.position.z / this.landscape.getSize().z
+			)
+		);
+
+		const rotatedMatrix = mat4.create();
+		mat4.rotateZ(rotatedMatrix, rotatedMatrix, this.tightBrayan.roll);
+		mat4.rotateX(rotatedMatrix, rotatedMatrix, this.tightBrayan.pitch);
+		mat4.rotateY(rotatedMatrix, rotatedMatrix, this.tightBrayan.yaw);
+
+		const result = mat4.create();
+		mat4.multiply(result, rotatedMatrix, translatedPos);
+		return result;
+		/*
 		return matrix4.multiply(
 			matrix4.multiply(
 				matrix4.multiply(
@@ -41,7 +61,7 @@ export default class Camera {
 				-(this.position.y + this.heightUnder) / this.landscape.getSize().y,
 				-this.position.z / this.landscape.getSize().z
 			)
-		);
+		);*/
 	}
 
 	public move(delta: number): void {
@@ -58,11 +78,11 @@ export default class Camera {
 	}
 
 	public yaw(angle: number): void {
-		this.tightBrayan.yaw = math.wrap(this.tightBrayan.yaw - angle, 0, 2 * Math.PI);
+		this.tightBrayan.yaw = wrap(this.tightBrayan.yaw - angle, 0, 2 * Math.PI);
 	}
 
 	public pitch(angle: number): void {
-		this.tightBrayan.pitch = math.wrap(this.tightBrayan.pitch - angle, 0.0, 2.0 * Math.PI);
+		this.tightBrayan.pitch = wrap(this.tightBrayan.pitch - angle, 0.0, 2.0 * Math.PI);
 	}
 
 	public set Landscape(landscape: Landscape) {

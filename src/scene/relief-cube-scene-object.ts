@@ -1,9 +1,11 @@
 import Camera from '../graphic/camera';
-import matrix4 from '../math/matrix4';
-import Vector from '../math/vector';
-import Cube from './cube/cube';
+import Cube from '../models/cube/cube';
+import GLObject from '../base/gl-object';
+import { mat4, vec3 } from 'gl-matrix';
+import FragmentShader from '../models/shaders/relief-object/fragment-shader';
+import VertexShader from '../models/shaders/relief-object/vertex-shader';
 
-export default class SimpleSceneObject {
+export default class ReliefCubeSceneObject extends GLObject {
 	private vertex: number[];
 	private index: number[];
 	private normal: number[];
@@ -12,10 +14,13 @@ export default class SimpleSceneObject {
 	private bitangent: number[];
 
 	private matrixes: {
-		translation: number[];
-		rotation: number[];
-		scale: number[];
+		translation: vec3;
+		rotation: vec3;
+		scale: vec3;
 	};
+
+	private rotationMatrix: mat4;
+	private isCatched: boolean;
 
 	private vertexBuffer: WebGLBuffer;
 	private indexBuffer: WebGLBuffer;
@@ -39,23 +44,27 @@ export default class SimpleSceneObject {
 	private uModelMatrixLocation: WebGLUniformLocation;
 	private uProjectionMatrixLocation: WebGLUniformLocation;
 	private uNormalMatrixLocation: WebGLUniformLocation;
+	private uRotationMatrixLocation: WebGLUniformLocation;
+
+	private fakeColorLocation: WebGLUniformLocation;
+	private isFakeLocation: WebGLUniformLocation;
 
 	private viewPosLocation: WebGLUniformLocation;
 
-	private gl: WebGLRenderingContext;
-	private program: WebGLProgram;
 	private camera: Camera;
-	private projMatrix: number[];
+	private projMatrix: mat4;
 
 	constructor(
 		gl: WebGLRenderingContext,
-		program: WebGLProgram,
 		camera: Camera,
-		projMatrix: number[],
+		projMatrix: mat4,
 		cube: Cube,
 		imageUrl: string,
-		reliefImageUrl: string
+		reliefImageUrl: string,
+		isTurnable: boolean = false
 	) {
+		super(gl);
+
 		const data = cube.getData();
 		this.vertex = data.vertex;
 		this.index = data.index;
@@ -65,25 +74,29 @@ export default class SimpleSceneObject {
 		this.bitangent = data.bitangent;
 
 		/* store variables */
-		this.gl = gl;
-		this.program = program;
 		this.camera = camera;
 		this.projMatrix = projMatrix;
+		this.isTurnable = isTurnable;
+		this.rotationMatrix = mat4.create();
 
 		/* init webgl data */
-		this.positionLocation = gl.getAttribLocation(program, 'a_position');
-		this.normalLocation = gl.getAttribLocation(program, 'a_normal');
-		this.uvLocation = gl.getAttribLocation(program, 'a_uv');
-		this.tangentLocation = gl.getAttribLocation(program, 'a_tangent');
-		this.biTangentLocation = gl.getAttribLocation(program, 'a_bitangent');
+		this.positionLocation = gl.getAttribLocation(this.program, 'aVertexPosition');
+		this.normalLocation = gl.getAttribLocation(this.program, 'aVertexNormal');
+		this.uvLocation = gl.getAttribLocation(this.program, 'aTextureCoord');
+		this.tangentLocation = gl.getAttribLocation(this.program, 'aTangent');
+		this.biTangentLocation = gl.getAttribLocation(this.program, 'aBitangent');
 
-		this.uViewMatrixLocation = gl.getUniformLocation(program, 'uViewMatrix');
-		this.uModelMatrixLocation = gl.getUniformLocation(program, 'uModelMatrix');
-		this.uProjectionMatrixLocation = gl.getUniformLocation(program, 'uProjectionMatrix');
-		this.uNormalMatrixLocation = gl.getUniformLocation(program, 'uNormalMatrix');
-		this.viewPosLocation = gl.getUniformLocation(program, 'viewPos');
-		this.textureLocation = gl.getUniformLocation(program, 'uSampler');
-		this.reliefTextureLocation = gl.getUniformLocation(program, 'uNormals');
+		this.uViewMatrixLocation = gl.getUniformLocation(this.program, 'uViewMatrix');
+		this.uModelMatrixLocation = gl.getUniformLocation(this.program, 'uModelMatrix');
+		this.uProjectionMatrixLocation = gl.getUniformLocation(this.program, 'uProjectionMatrix');
+		this.uRotationMatrixLocation = gl.getUniformLocation(this.program, 'uRotationMatrix');
+		this.uNormalMatrixLocation = gl.getUniformLocation(this.program, 'uNormalMatrix');
+		this.viewPosLocation = gl.getUniformLocation(this.program, 'viewPos');
+		this.textureLocation = gl.getUniformLocation(this.program, 'uSampler');
+		this.reliefTextureLocation = gl.getUniformLocation(this.program, 'uNormals');
+
+		this.isFakeLocation = gl.getUniformLocation(this.program, 'isFake');
+		this.fakeColorLocation = gl.getUniformLocation(this.program, 'fakeColor');
 
 		this.indexBuffer = gl.createBuffer();
 		gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
@@ -140,7 +153,43 @@ export default class SimpleSceneObject {
 		this.matrixes = matrixes;
 	}
 
+	public set IsCatched(isCatched: boolean) {
+		this.isCatched = isCatched;
+	}
+
+	public rotate(angleX: number, angleY: number): void {
+		let rotationMatrix = this.rotationMatrix;
+		let fromRotationMatrix = mat4.create();
+		mat4.multiply(
+			rotationMatrix,
+			rotationMatrix,
+			mat4.fromRotation(
+				fromRotationMatrix,
+				angleX,
+				vec3.fromValues(rotationMatrix[1], rotationMatrix[5], rotationMatrix[9])
+			)
+		);
+		mat4.multiply(
+			rotationMatrix,
+			rotationMatrix,
+			mat4.fromRotation(
+				fromRotationMatrix,
+				angleY,
+				vec3.fromValues(rotationMatrix[0], rotationMatrix[4], rotationMatrix[8])
+			)
+		);
+		this.rotationMatrix = rotationMatrix;
+	}
+
 	public render() {
+		this._render();
+	}
+
+	public fakeRender(color: number[]) {
+		this._render(true, color);
+	}
+
+	private _render(isFake: boolean = false, fakeColor: number[] = [0, 0, 0]) {
 		const gl = this.gl;
 		gl.useProgram(this.program);
 
@@ -167,27 +216,34 @@ export default class SimpleSceneObject {
 		const P = this.projMatrix;
 		const V = this.camera.getViewMatrix();
 
-		let M = matrix4.identity();
-		M = matrix4.translate(
+		let M = mat4.create();
+		let N = mat4.create();
+		mat4.translate(
 			M,
-			this.matrixes.translation[0],
-			this.matrixes.translation[1],
-			this.matrixes.translation[2]
-		);
-		M = matrix4.rotate(
 			M,
-			this.matrixes.rotation[0],
-			this.matrixes.rotation[1],
-			this.matrixes.rotation[2]
+			vec3.fromValues(
+				this.matrixes.translation[0],
+				this.matrixes.translation[1],
+				this.matrixes.translation[2]
+			)
 		);
-		M = matrix4.scale(M, this.matrixes.scale[0], this.matrixes.scale[1], this.matrixes.scale[2]);
 
-		let N = matrix4.transpose(matrix4.inverse(matrix4.multiply(M, V)));
+		mat4.rotateX(M, M, this.matrixes.rotation[0]);
+		mat4.rotateY(M, M, this.matrixes.rotation[1]);
+		mat4.rotateZ(M, M, this.matrixes.rotation[2]);
+
+		mat4.scale(
+			M,
+			M,
+			vec3.fromValues(this.matrixes.scale[0], this.matrixes.scale[1], this.matrixes.scale[2])
+		);
+		mat4.multiply(N, M, mat4.transpose(N, mat4.invert(N, N)));
 
 		gl.uniformMatrix4fv(this.uModelMatrixLocation, false, M);
 		gl.uniformMatrix4fv(this.uViewMatrixLocation, false, V);
 		gl.uniformMatrix4fv(this.uProjectionMatrixLocation, false, P);
 		gl.uniformMatrix4fv(this.uNormalMatrixLocation, false, N);
+		gl.uniformMatrix4fv(this.uRotationMatrixLocation, false, this.rotationMatrix);
 
 		gl.activeTexture(gl.TEXTURE0);
 		gl.bindTexture(gl.TEXTURE_2D, this.texture);
@@ -197,7 +253,19 @@ export default class SimpleSceneObject {
 		gl.bindTexture(gl.TEXTURE_2D, this.reliefTexture);
 		gl.uniform1i(this.reliefTextureLocation, 1);
 
+		/* logic fake drowing */
+		gl.uniform1i(this.isFakeLocation, isFake === false ? 0 : 1);
+		gl.uniform3fv(this.fakeColorLocation, fakeColor);
+
 		gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
-		gl.drawElements(gl.TRIANGLES, this.index.length, gl.UNSIGNED_SHORT, 0);
+		gl.drawElements(this.getPrimitiveType(), this.index.length, gl.UNSIGNED_SHORT, 0);
+	}
+
+	getFS(): string {
+		return FragmentShader;
+	}
+
+	getVS(): string {
+		return VertexShader;
 	}
 }
